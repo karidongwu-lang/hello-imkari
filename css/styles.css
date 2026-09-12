@@ -1,0 +1,507 @@
+:root {
+  --gold: #f7c94a;
+  --gold-dim: #b4943a;
+  --ease: cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #fff;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  /* overflow-x:hidden here would make body a scroll container and
+     silently break position:sticky on #work-hero — clip avoids that */
+  overflow-x: clip;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+img { display: block; max-width: 100%; }
+
+/* ---------- Per-mat nav ---------- */
+
+.mat-nav {
+  position: absolute;
+  bottom: 4%;
+  right: 3%;
+  z-index: 30;
+  display: flex;
+  gap: 0.9em;
+  font-size: 16px;
+  color: #fff;
+  letter-spacing: -0.05em;
+}
+
+.mat-nav .nav-link {
+  font-weight: 400;
+  transition: opacity 0.15s;
+}
+
+.mat-nav .nav-link[data-active="true"] { font-weight: 700; }
+.mat-nav .nav-link:hover { opacity: 0.7; }
+
+/* back button: bottom-left, same row as .mat-nav (bottom-right) */
+.back-btn {
+  position: absolute;
+  bottom: 4%;
+  left: 3%;
+  z-index: 30;
+  font-size: 16px;
+  color: #fff;
+  letter-spacing: -0.05em;
+  transition: opacity 0.15s;
+}
+.back-btn:hover { opacity: 0.7; }
+.back-btn[hidden] { display: none; }
+
+/* sub nav (art tab: illustrations/sketches) */
+.sub-nav {
+  position: absolute;
+  right: 3%;
+  bottom: 7%;
+  display: flex;
+  gap: 0.8em;
+  font-size: 14px;
+  color: #fff;
+  letter-spacing: -0.05em;
+  z-index: 20;
+  transition: opacity 0.25s var(--ease);
+}
+.sub-nav[hidden] { display: none; }
+.sub-nav .nav-link[data-active="true"] { font-weight: 700; }
+
+/* ---------- Shared mat / mat-frame ---------- */
+
+.tab { position: relative; width: 100%; }
+
+/* mat-frame: full white page area that centers the mat card, so the
+   whole cutting mat (incl. rounded corners) is always visible */
+.mat-frame {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4vh 4vw;
+  background: #fff;
+  z-index: 5;
+  transition: padding 0.5s var(--ease);
+}
+
+.mat-frame--sticky {
+  position: sticky;
+  top: calc(-100vh + 150px);
+}
+
+/* Once fully parked/stuck (js/work.js adds .stuck-flush only at scroll
+   progress ~1), only the frame's bottom edge is visible on screen — but
+   the frame's own padding-bottom (from the shared .mat-frame rule,
+   meant to center the mat while it's still full-size) doesn't go away
+   just because it's stuck, so it was leaving a plain white gap between
+   the visible green strip and whatever content follows. Dropping it to
+   0 and bottom-aligning the mat instead makes the strip's visible edge
+   flush against the case study content right below it.
+   This must NOT apply for the whole "selected" state (only once truly
+   parked) — applying it immediately on selection, before any scrolling,
+   pushed the still full-size resting mat down out of the visible area
+   instead of leaving it centered like the "stars 34" moment needs. */
+.mat-frame--sticky.stuck-flush {
+  padding-bottom: 0;
+  align-items: flex-end;
+}
+
+.mat {
+  position: relative;
+  width: 100%;
+  max-width: calc(92vh * 1.6825);
+  aspect-ratio: 1605.69 / 954.18;
+  transition: max-width 0.5s var(--ease), aspect-ratio 0.5s var(--ease);
+}
+
+.mat-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  z-index: 0;
+}
+
+.headline {
+  position: absolute;
+  left: 3%;
+  top: 3%;
+  transform: none;
+  margin: 0;
+  font-weight: 700;
+  font-size: clamp(2.6rem, 11vw, 11rem);
+  letter-spacing: -0.05em;
+  color: var(--gold);
+  white-space: nowrap;
+  z-index: 1;
+  transition: color 0.4s var(--ease), opacity 0.4s var(--ease);
+  pointer-events: none;
+}
+
+/* small "Kari" logo the big headline shrinks/crossfades into once the
+   art grid is expanded (same spot, same styling family as .headline) */
+.art-logo {
+  position: absolute;
+  left: 3%;
+  top: 2%;
+  margin: 0;
+  font-weight: 700;
+  font-size: 6.2rem;
+  letter-spacing: -0.08em;
+  color: var(--gold);
+  z-index: 1;
+  opacity: 0;
+  transition: opacity 0.4s var(--ease);
+  pointer-events: none;
+}
+
+/* =========================================================
+   WORK TAB
+   ========================================================= */
+
+/* short — just enough runway after the notecard finishes parking
+   (driven separately by scrollProgress() in js/work.js, tied to the
+   sticky hero's own collapse distance) before the case study content
+   arrives; it isn't meant to be a long scroll on its own. */
+.scroll-spacer { height: 10vh; }
+#tab-work[data-state="selected"] .scroll-spacer { display: block; }
+#tab-work[data-state="closed"] .scroll-spacer,
+#tab-work[data-state="open"] .scroll-spacer { height: 0; }
+
+.case-study {
+  position: relative;
+  z-index: 1;
+  min-height: 40vh;
+  background: #fff;
+}
+
+/* the sketchbook engine (js/sketchbook.js) mounts here; it renders both
+   the closed cover and the open spread inside this one fixed-aspect box */
+.sketchbook-mount {
+  position: absolute;
+  left: 19.1%;
+  top: 16.9%;
+  width: 61.8%;
+  aspect-ratio: 1760 / 1240;
+  z-index: 2;
+  transition: opacity 0.5s var(--ease), transform 0.5s var(--ease), visibility 0s linear 0.5s;
+}
+
+.sketchbook-mount.dropped {
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(60%);
+  pointer-events: none;
+}
+
+.notecards {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.5s var(--ease) 0.2s;
+}
+.notecards.show { opacity: 1; pointer-events: auto; }
+
+.notecard {
+  position: absolute;
+  left: var(--cx);
+  top: var(--cy);
+  width: var(--w);
+  transform: translate(-50%, -50%) rotate(var(--r));
+  filter: drop-shadow(0px 4px 4px rgba(0, 0, 0, 0.25));
+  transition: transform 0.6s var(--ease), opacity 0.5s var(--ease), left 0.6s var(--ease), top 0.6s var(--ease), width 0.6s var(--ease);
+}
+
+.notecard img { width: 100%; }
+
+.notecard:not(.notecard--dropped):hover {
+  transform: translate(-50%, -50%) rotate(var(--r)) scale(1.04);
+}
+
+.notecard--dropped {
+  transform: translate(-50%, 140%) rotate(var(--r)) !important;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.notecard--selected {
+  left: 50%;
+  top: 56%;
+  width: 22%;
+  transform: translate(-50%, -50%) rotate(0deg);
+  z-index: 6;
+}
+
+/* =========================================================
+   ART TAB
+   ========================================================= */
+
+/* expanded state: the background pins to the viewport (so it stays put
+   while the gallery scrolls over it) and scales up ~1.3x to read as a
+   full-screen backdrop instead of a bordered card. */
+#tab-art[data-state="expanded"] #art-frame {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+}
+.mat--art { transition: transform 0.7s var(--ease); }
+#tab-art[data-state="expanded"] .mat--art { transform: scale(1.3); }
+
+#tab-art[data-state="expanded"] .headline { opacity: 0; }
+#tab-art[data-state="expanded"] .art-logo { opacity: 1; }
+
+.art-scatter {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  transition: opacity 0.5s var(--ease), transform 0.5s var(--ease);
+}
+
+.scatter-img {
+  position: absolute;
+  width: 29%;
+  height: auto;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
+  transform: translate(-50%, -50%) rotate(var(--r, 0deg));
+}
+.scatter-img[data-slot="0"] { left: 53.7%; top: 53.2%; --r: 10.28deg; z-index: 1; }
+.scatter-img[data-slot="1"] { left: 53.6%; top: 60.6%; --r: 1.52deg; z-index: 2; }
+.scatter-img[data-slot="2"] { left: 55.5%; top: 62.5%; --r: 1.52deg; z-index: 3; }
+
+.art-cover {
+  position: absolute;
+  left: 50%;
+  top: 57.5%;
+  width: 30.2%;
+  transform: translate(-50%, -50%);
+  z-index: 4;
+  box-shadow: inset 4px 6px 3px rgba(255, 255, 255, 0.3), inset -7px -8px 4px rgba(0, 0, 0, 0.25), 0 6px 18px rgba(0, 0, 0, 0.4);
+  border-radius: 4%;
+  overflow: hidden;
+  transition: transform 0.6s var(--ease);
+}
+.art-cover img { border-radius: inherit; }
+
+/* normal document flow (not absolute) so its real content height makes
+   the page scrollable while the background stays fixed behind it — see
+   #art-frame above. Zero-height + clipped until expanded so the hidden
+   grid can't make the "cover" state scrollable. */
+.art-grid {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  gap: 1.1vw;
+  max-width: min(1100px, 90vw);
+  margin: 0 auto;
+  /* padding lives only in the expanded rule below — height:0 does NOT
+     override padding, so unconditional padding here would still force
+     ~216px of real (scrollable, partially visible) box height even while
+     "collapsed" */
+  padding: 0;
+  height: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* one masonry column — exactly three, always; each image inside keeps
+   its own natural aspect ratio (no cropping), and the same gap value is
+   used both between columns and between images stacked in a column, so
+   spacing reads as consistent in every direction */
+.art-col {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.1vw;
+  min-width: 0;
+}
+
+.art-grid img {
+  width: 100%;
+  height: auto;
+  display: block;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  cursor: zoom-in;
+  transition: transform 0.3s var(--ease), box-shadow 0.3s var(--ease);
+}
+
+.art-grid img:hover {
+  transform: scale(1.04);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.4);
+}
+
+/* ---------- lightbox: click a gallery image to enlarge ---------- */
+.art-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.85);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s var(--ease);
+}
+.art-lightbox.open { opacity: 1; pointer-events: auto; }
+.art-lightbox img {
+  max-width: 88vw;
+  max-height: 88vh;
+  width: auto;
+  height: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+  cursor: zoom-out;
+}
+
+#tab-art[data-state="expanded"] .art-scatter {
+  opacity: 0;
+  transform: scale(1.1);
+  pointer-events: none;
+}
+
+#tab-art[data-state="expanded"] .art-grid {
+  height: auto;
+  overflow: visible;
+  pointer-events: auto;
+  padding: 14vh 0 10vh;
+}
+
+#tab-art[data-state="expanded"] .sub-nav { opacity: 1; }
+
+/* nav/back/sub-nav for the art tab live outside .mat (see index.html) so
+   they stay above the fixed background and the scrolling gallery, always
+   reachable regardless of scroll position or expanded state */
+.art-fixed-nav { position: fixed; z-index: 40; }
+
+/* the outside/fixed main nav only takes over once expanded (mat is a
+   fixed full-screen background at that point, so viewport-relative
+   positioning matches); before that, the inside-mat copy above keeps the
+   cover state's nav pixel-consistent with work/about. */
+.art-fixed-nav.mat-nav { display: none; }
+#tab-art[data-state="expanded"] .mat--art > .mat-nav { display: none; }
+#tab-art[data-state="expanded"] .art-fixed-nav.mat-nav { display: flex; }
+
+/* =========================================================
+   ABOUT TAB
+   ========================================================= */
+
+/* #about-book intentionally has no position override anymore — it uses
+   the same left/top/width as .sketchbook-mount's base rule (matching
+   work's landing layout exactly), just like the user asked */
+
+.polaroid-trigger {
+  position: absolute;
+  left: 53.1%;
+  top: 16.9%;
+  width: 27.8%;
+  height: 73.3%;
+  z-index: 5;
+}
+#tab-about[data-state="closed"] .polaroid-trigger,
+#tab-about[data-state="expanded"] .polaroid-trigger { display: none; }
+
+.polaroids {
+  position: absolute;
+  right: 22.8%;
+  top: 53.5%;
+  width: 16%;
+  transform: translateY(-50%);
+  z-index: 4;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s var(--ease);
+}
+
+#tab-about[data-state="open"] .polaroids,
+#tab-about[data-state="expanded"] .polaroids {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.polaroid {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 100%;
+  transform: translateY(-50%) rotate(var(--r)) translate(var(--ox), var(--oy));
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.3);
+  transition: transform 0.6s var(--ease), left 0.6s var(--ease), top 0.6s var(--ease);
+}
+
+.polaroid[data-i="0"] { --r: -8deg; --ox: -6%; --oy: -30%; z-index: 4; }
+.polaroid[data-i="1"] { --r: 5deg; --ox: 8%; --oy: -8%; z-index: 3; }
+.polaroid[data-i="2"] { --r: -4deg; --ox: -4%; --oy: 14%; z-index: 2; }
+.polaroid[data-i="3"] { --r: 7deg; --ox: 6%; --oy: 34%; z-index: 1; }
+
+/* Expanded state breaks out of .mat's own box entirely (fixed to the
+   viewport, not absolute-within-mat) so the column clips at the top/
+   bottom of the actual webpage instead of wherever the notebook's card
+   happens to end — the notebook is nowhere near full-page height, so
+   staying mat-relative here was what cut the column off early. */
+#tab-about[data-state="expanded"] .polaroids {
+  position: fixed;
+  right: 9vw;
+  top: 0;
+  bottom: 0;
+  width: 15vw;
+  height: auto;
+  transform: none;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4vh;
+  padding: 6vh 0;
+  scroll-snap-type: y proximity;
+  /* scrollable for overflow, but no visible scrollbar "bar" on the side */
+  scrollbar-width: none;
+}
+#tab-about[data-state="expanded"] .polaroids::-webkit-scrollbar {
+  display: none;
+}
+
+/* forces closing to go through the back button's staged expanded->open
+   (recluster) -> open->closed logic, instead of letting a click land
+   directly on the book and skip straight to closed while polaroids are
+   still spread out in their column */
+#tab-about[data-state="expanded"] .sketchbook-mount {
+  pointer-events: none;
+}
+
+#tab-about[data-state="expanded"] .polaroid {
+  position: relative;
+  left: auto;
+  top: auto;
+  transform: none !important;
+  flex: 0 0 auto;
+  scroll-snap-align: center;
+}
+
+/* ---------- small screens: scale everything down gracefully ---------- */
+
+@media (max-width: 640px) {
+  .mat-nav { font-size: 13px; gap: 0.6em; }
+  .sketchbook-mount { width: 84%; }
+  .notecard { width: calc(var(--w) * 1.5); }
+  .polaroids { width: 26%; }
+}
+
+/* ---------- sketchbook engine chrome: hidden site-wide ---------- */
+.sb-arrow, .sb-tools, .sb-hint { display: none !important; }
+.sb-wrap { gap: 0 !important; }

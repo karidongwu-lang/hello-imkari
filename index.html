@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kari Wu</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400;1,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css?v=25">
+<link rel="stylesheet" href="css/sketchbook.css?v=23">
+<link rel="stylesheet" href="css/case-study.css?v=4">
+</head>
+<body>
+
+<main id="main">
+
+  <!-- WORK TAB -->
+  <section class="tab tab--work" id="tab-work" data-state="closed">
+    <div class="mat-frame mat-frame--sticky" id="work-hero">
+      <div class="mat" id="work-mat">
+        <img class="mat-bg" src="cuttingmat.svg" alt="">
+
+        <h1 class="headline" id="work-headline">Hello! I&rsquo;m Kari</h1>
+
+        <div class="sketchbook-mount" id="work-book"></div>
+
+        <div class="notecards" id="notecards">
+          <button class="notecard" data-card="previa" type="button" style="--cx:67.1%; --cy:39.5%; --w:27%; --r:9.14deg;">
+            <img src="about/prevanotecard.png" alt="Preva notecard">
+          </button>
+          <button class="notecard" data-card="build-our-bridges" type="button" style="--cx:55%; --cy:63.8%; --w:26.5%; --r:-6.98deg;">
+            <img src="about/buildourbridgesnotecard.png" alt="Build Our Bridges notecard">
+          </button>
+          <button class="notecard" data-card="smart-pill-dispenser" type="button" style="--cx:31.7%; --cy:38.9%; --w:27.4%; --r:-10.91deg;">
+            <img src="about/pilldispensernotecard.png" alt="Pill Dispenser notecard">
+          </button>
+        </div>
+
+        <button class="back-btn" id="work-back" type="button" hidden>(back)</button>
+
+        <nav class="mat-nav" data-nav-group>
+          <button class="nav-link" data-tab="about">(about)</button>
+          <button class="nav-link" data-tab="work">(work)</button>
+          <button class="nav-link" data-tab="art">(art)</button>
+        </nav>
+      </div>
+    </div>
+
+    <div class="scroll-spacer" id="work-spacer"></div>
+
+    <div class="prv-sidebar" id="case-study-sidebar"></div>
+    <section class="case-study" id="case-study" data-slug="" hidden></section>
+  </section>
+
+  <!-- ART TAB -->
+  <section class="tab tab--art" id="tab-art" data-state="cover" hidden>
+    <div class="mat-frame" id="art-frame">
+      <div class="mat mat--art" id="art-mat">
+        <img class="mat-bg" src="cuttingmat.svg" alt="">
+
+        <h1 class="headline">Hello! I&rsquo;m Kari</h1>
+
+        <div class="art-scatter" id="art-scatter"></div>
+
+        <!-- matches work/about exactly (same DOM position relative to
+             .mat) so the landing/cover state's nav lines up pixel-for-
+             pixel with the other two tabs. Swapped out for the fixed
+             .art-fixed-nav copy below once expanded. -->
+        <nav class="mat-nav" data-nav-group>
+          <button class="nav-link" data-tab="about">(about)</button>
+          <button class="nav-link" data-tab="work">(work)</button>
+          <button class="nav-link" data-tab="art">(art)</button>
+        </nav>
+      </div>
+    </div>
+
+    <div class="art-grid" id="art-grid"></div>
+
+    <div class="art-logo art-fixed-nav">Kari</div>
+
+    <button class="back-btn art-fixed-nav" id="art-back" type="button" hidden>(back)</button>
+
+    <nav class="mat-nav art-fixed-nav" data-nav-group>
+      <button class="nav-link" data-tab="about">(about)</button>
+      <button class="nav-link" data-tab="work">(work)</button>
+      <button class="nav-link" data-tab="art">(art)</button>
+    </nav>
+
+    <nav class="sub-nav art-fixed-nav" id="art-subnav" hidden>
+      <button class="nav-link" data-sub="illustrations">(illustrations)</button>
+      <button class="nav-link" data-sub="sketches">(studies)</button>
+    </nav>
+  </section>
+
+  <!-- ABOUT TAB -->
+  <section class="tab tab--about" id="tab-about" data-state="closed" hidden>
+    <div class="mat-frame">
+      <div class="mat" id="about-mat">
+        <img class="mat-bg" src="cuttingmat.svg" alt="">
+
+        <h1 class="headline">Hello! I&rsquo;m Kari</h1>
+
+        <div class="sketchbook-mount" id="about-book"></div>
+
+        <button class="polaroid-trigger" id="polaroid-trigger" type="button" aria-label="View photos"></button>
+
+        <div class="polaroids" id="polaroids">
+          <img class="polaroid" data-i="0" src="about/poloraid1.png" alt="Polaroid: i love the metro">
+          <img class="polaroid" data-i="1" src="about/poloraid2.png" alt="Polaroid">
+          <img class="polaroid" data-i="2" src="about/poloraid3.png" alt="Polaroid">
+          <img class="polaroid" data-i="3" src="about/poloraid4.png" alt="Polaroid">
+        </div>
+
+        <button class="back-btn" id="about-back" type="button" hidden>(back)</button>
+
+        <nav class="mat-nav" data-nav-group>
+          <button class="nav-link" data-tab="about">(about)</button>
+          <button class="nav-link" data-tab="work">(work)</button>
+          <button class="nav-link" data-tab="art">(art)</button>
+        </nav>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<div class="art-lightbox" id="art-lightbox">
+  <img id="art-lightbox-img" src="" alt="">
+</div>
+
+<script src="js/projects.js?v=1"></script>
+<script src="js/main.js?v=24" type="module"></script>
+</body>
+</html>

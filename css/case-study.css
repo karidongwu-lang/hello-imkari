@@ -1,0 +1,181 @@
+/* Case study content styles — ported from the "prv-*" template used by
+   the other Kari Wu portfolio build (case-study.html there), so the
+   case-study deep-dive keeps its own distinct editorial look instead of
+   inheriting the cutting-mat/sketchbook aesthetic. Dark mode, the
+   fixed-nav-height sidebar offset, and the separate-page "next
+   project"/"back to work" footer were dropped — this site is a single
+   page with its own back button and no persistent top nav bar.
+*/
+
+.prv-page {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #1b2a4a;
+  line-height: 1.6;
+  --cs-navy: #1b2a4a;
+  --cs-accent: #00473a;
+  --cs-muted: #6b7a99;
+  --cs-border: #e5e8ef;
+}
+
+.prv-page h1, .prv-page h2, .prv-page h3 {
+  font-family: "EB Garamond", Georgia, serif;
+  font-weight: 400;
+}
+
+/* ── Sidebar (section jump-links) ── */
+.prv-sidebar {
+  position: fixed;
+  /* `top` is set inline by js/work.js — it tracks the bottom edge of the
+     parked notecard live (that card shrinks into the same top-left
+     corner once the hero is scroll-locked), so a fixed guess here would
+     drift out of sync across viewport sizes. This is just a sane
+     pre-JS fallback. */
+  top: 230px;
+  left: 80px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 15;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s var(--ease, ease);
+}
+/* only appears once scrolled past the hero image, per request — before
+   that it would just sit awkwardly over/under the reveal animation */
+.prv-sidebar.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+.prv-sidebar a {
+  display: block;
+  text-decoration: none;
+  white-space: nowrap;
+  color: #c8cdd9;
+  font-size: 13px;
+  font-family: "Andale Mono", "Courier New", monospace;
+  padding: 2px 0;
+  transition: color 0.15s;
+}
+.prv-sidebar a:hover { color: var(--cs-navy); }
+.prv-sidebar a.active { color: var(--cs-navy); }
+@media (max-width: 1100px) { .prv-sidebar { display: none; } }
+
+/* ── Layout ── */
+.prv-container { max-width: 800px; margin: 0 auto; padding: 0 32px; }
+.prv-container-wide { max-width: 1100px; margin: 0 auto; padding: 0 32px; }
+
+/* ── Hero ── */
+.prv-hero { padding: 0 0 56px; }
+.prv-hero-meta { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+.prv-hero-tag { font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--cs-accent); }
+.prv-hero h1 { font-size: clamp(22px, 3vw, 36px); color: var(--cs-navy); line-height: 1.15; margin-bottom: 16px; }
+.prv-hero-summary { font-size: 17px; color: var(--cs-muted); max-width: 600px; margin-bottom: 32px; line-height: 1.6; }
+.prv-hero-attrs { display: flex; gap: 40px; padding: 20px 0; border-top: 1px solid var(--cs-border); flex-wrap: wrap; }
+.prv-attr-label { font-size: 10px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: var(--cs-muted); margin-bottom: 4px; }
+.prv-attr-val { font-size: 13px; font-weight: 600; color: var(--cs-navy); }
+.prv-hero-img { width: 100%; display: block; }
+
+/* ── Sections ── */
+.prv-section { padding: 72px 0; position: relative; }
+.prv-section:not(:last-of-type)::after {
+  content: "";
+  display: block;
+  width: 80px;
+  height: 8px;
+  background: url("data:image/svg+xml,%3Csvg width='80' height='8' viewBox='0 0 80 8' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0,4 C6,2.5 10,5.5 16,4 C20,3 24,5 30,4 C35,3 40,6 46,4 C51,2.5 56,5 62,4 C67,3 72,5.5 78,4 L80,4' stroke='%2300473A' stroke-width='1.8' fill='none' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat center;
+  margin: 72px auto 0;
+}
+.prv-section-num { font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--cs-accent); margin-bottom: 10px; }
+.prv-page h2 { font-size: 30px; color: var(--cs-navy); margin-bottom: 20px; }
+.prv-page p { font-size: 15px; color: #3a4a6a; margin-bottom: 16px; max-width: 660px; line-height: 1.7; }
+.prv-page p:last-child { margin-bottom: 0; }
+
+/* ── Images ── */
+.prv-img {
+  width: 100%;
+  display: block;
+  border-radius: 10px;
+  border: 1px solid var(--cs-border);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+  margin-top: 32px;
+}
+.prv-img-row { display: flex; gap: 16px; margin-top: 32px; flex-wrap: wrap; }
+.prv-img-row .prv-img-wrap { flex: 1 1 200px; min-width: 0; }
+.prv-img-row .prv-img-wrap img {
+  width: 100%;
+  display: block;
+  border-radius: 10px;
+  border: 1px solid var(--cs-border);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+}
+.prv-img-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 32px; }
+.prv-img-grid img {
+  width: 100%;
+  display: block;
+  border-radius: 10px;
+  border: 1px solid var(--cs-border);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+}
+@media (max-width: 640px) {
+  .prv-img-grid { grid-template-columns: 1fr 1fr; }
+  .prv-img-row { flex-direction: column; }
+}
+.prv-img-caption { font-size: 12px; color: var(--cs-muted); margin-top: 6px; text-align: center; font-style: italic; }
+
+/* ── Video ── */
+.prv-video { width: 100%; display: block; border-radius: 10px; border: 1px solid var(--cs-border); margin-top: 32px; }
+
+/* ── Project sub-label (BOBA-style multi-project case studies) ── */
+.prv-project-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--cs-muted);
+  margin-bottom: 32px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--cs-border);
+}
+
+/* ── Prev/next project footer ── */
+.prv-project-nav-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  padding-top: 24px;
+  border-top: 1px solid var(--cs-border);
+}
+.prv-project-btn {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+  cursor: pointer;
+  max-width: 45%;
+}
+.prv-project-btn--next { text-align: right; align-items: flex-end; margin-left: auto; }
+.prv-project-nav-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--cs-accent);
+}
+.prv-project-nav-title {
+  font-family: "EB Garamond", Georgia, serif;
+  font-size: clamp(1.1rem, 2vw, 1.5rem);
+  color: var(--cs-navy);
+  transition: color 0.15s;
+}
+.prv-project-btn:hover .prv-project-nav-title { color: var(--cs-accent); }
+
+@media (max-width: 640px) {
+  .prv-container, .prv-container-wide { padding: 0 20px; }
+  .prv-hero h1 { font-size: clamp(18px, 6vw, 28px); }
+  .prv-hero-attrs { gap: 20px; }
+  .prv-section { padding: 48px 0; }
+  .prv-section:not(:last-of-type)::after { margin-top: 48px; }
+  .prv-page h2 { font-size: 22px; }
+  .prv-hero-summary { font-size: 15px; }
+  .prv-project-btn { max-width: 48%; }
+}

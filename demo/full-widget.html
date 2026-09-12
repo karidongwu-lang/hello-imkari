@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Demo B — full widget (unmodified)</title>
+<style>
+  body { margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center; background:#efe9dd; font-family:-apple-system,sans-serif; }
+</style>
+</head>
+<body>
+<!--
+  Sketchbook flipbook widget — extracted, page-chrome removed.
+  Depends on: an images folder (DIR below) with PAGES[].file assets,
+  and the CSS variables --ink / --ink-soft / --ink-faint / --hairline / --earth / --paper
+  (defined below with fallback values so this runs standalone).
+-->
+<div class="sb-wrap" id="sbWrap" style="max-width:560px; margin:auto;">
+  <div class="sb-stage" id="sbStage">
+    <button class="sb-arrow left" id="sbLeft" aria-label="previous page">
+      <svg viewBox="0 0 14 44" width="14" height="44" fill="none" aria-hidden="true"><polyline points="11,3 3,22 11,41" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div class="sb-3d" id="sb3d">
+      <div class="sb-tilt" id="sbTilt">
+        <div class="sb-cast ambient" aria-hidden="true"></div>
+        <div class="sb-cast contact" aria-hidden="true"></div>
+        <div class="sb-cast hair" aria-hidden="true"></div>
+        <div class="sb-book" id="sbBook"></div>
+      </div>
+    </div>
+    <button class="sb-arrow right" id="sbRight" aria-label="next page">
+      <svg viewBox="0 0 14 44" width="14" height="44" fill="none" aria-hidden="true"><polyline points="3,3 11,22 3,41" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+  </div>
+  <div class="sb-captions" id="sbCaptions"></div>
+  <div class="sb-tools" role="group" aria-label="view controls">
+    <button class="tool" id="zOut" aria-label="zoom out"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="8.6" cy="8.6" r="5.6"/><path d="M12.8 12.8 17.4 17.4M6.2 8.6h4.8"/></svg></button>
+    <span class="zoom-read" id="zRead">100%</span>
+    <button class="tool" id="zIn" aria-label="zoom in"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="8.6" cy="8.6" r="5.6"/><path d="M12.8 12.8 17.4 17.4M6.2 8.6h4.8M8.6 6.2v4.8"/></svg></button>
+  </div>
+  <p class="sb-hint" id="sbHint">Tap the cover to open</p>
+</div>
+
+<style>
+/* Minimal palette so this block is self-contained — swap these into your
+   page's own :root if you already define them. */
+:root{
+  --ink:#2b2721;
+  --ink-soft:rgba(43,39,33,.58);
+  --ink-faint:rgba(43,39,33,.36);
+  --hairline:rgba(43,39,33,.14);
+  --earth:#9a6a3e;
+  --pg:1%; /* vertical inset for the turn-shading overlay — full-bleed art has no built-in margin */
+  --paper:#ece7dc;
+}
+
+/* prevents the drag gesture from selecting page text / dragging images */
+.sb-wrap,.sb-wrap *{-webkit-user-select:none;-moz-user-select:none;user-select:none}
+.sb-wrap img{-webkit-user-drag:none;user-drag:none}
+
+.sb-wrap{display:grid;justify-items:center;gap:20px;width:100%;position:relative;z-index:2}
+.sb-stage{
+  display:flex;align-items:center;justify-content:center;width:100%;
+  position:relative;
+  touch-action:pan-y;
+}
+.sb-arrow{
+  flex:none;display:inline-flex;align-items:center;justify-content:center;padding:6px 2px;
+  border:0;background:transparent;color:var(--ink-faint);cursor:pointer;transition:color .2s;
+  -webkit-tap-highlight-color:transparent;z-index:8;
+}
+.sb-arrow:hover{color:var(--ink)}
+.sb-arrow:disabled{opacity:.22;cursor:default}
+
+/* This is the book's own untransformed frame: only .sb-tilt leans and
+   scales underneath it. */
+.sb-3d{
+  position:relative;flex:1 1;min-width:0;max-width:900px;
+  perspective:1750px;perspective-origin:50% 46%;
+}
+.sb-tilt{
+  position:relative;
+  transform-style:preserve-3d;
+  transform:translateX(var(--shift,0%)) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg)) scale(var(--zoom,1));
+  will-change:transform;
+}
+.sb-book{position:relative;width:100%;aspect-ratio:1760/1240;transform-style:preserve-3d;z-index:1}
+
+/* The book sits on a surface, so its shadow is a soft pool underneath —
+   no box, no filter on the artwork, nothing with an edge of its own.
+   Both blobs fade to zero well inside their own bounds, and both ease
+   off while a leaf is in the air. */
+.sb-cast{position:absolute;pointer-events:none;z-index:0}
+.sb-cast.ambient{
+  left:calc(5% + var(--fpL,0) * 45%);right:calc(5% + var(--fpR,0) * 45%);top:27%;bottom:2%;
+  background:radial-gradient(50% 50% at 50% 58%,
+    rgba(58,44,26,.34) 0%,rgba(58,44,26,.19) 40%,rgba(58,44,26,0) 74%);
+  filter:blur(26px);
+  opacity:calc(1 - var(--shade,0) * .42);
+}
+.sb-cast.contact{
+  left:calc(9% + var(--fpL,0) * 41%);right:calc(9% + var(--fpR,0) * 41%);top:62%;bottom:10%;
+  background:radial-gradient(50% 44% at 50% 42%,
+    rgba(44,32,14,.40) 0%,rgba(44,32,14,.17) 48%,rgba(44,32,14,0) 78%);
+  filter:blur(11px);
+  opacity:calc(1 - var(--shade,0) * .5);
+}
+.sb-cast.hair{
+  left:calc(12% + var(--fpL,0) * 38%);right:calc(12% + var(--fpR,0) * 38%);top:70%;bottom:17%;
+  background:radial-gradient(50% 52% at 50% 40%,
+    rgba(40,28,10,.34) 0%,rgba(40,28,10,0) 76%);
+  filter:blur(4px);
+  opacity:calc(1 - var(--shade,0) * .62);
+}
+.sb-full{position:absolute;inset:0}
+.sb-full img{width:100%;height:auto;display:block}
+.sb-half{position:absolute;top:0;bottom:0;width:50%;overflow-x:clip;overflow-y:visible}
+.sb-half.left{left:0}
+.sb-half.right{left:50%}
+.sb-half-img{width:200%;max-width:none;height:auto;display:block}
+.sb-half-img.right{margin-left:-100%}
+/* the shadow the lifting leaf throws onto the page beneath it */
+.gutter-shade{
+  position:absolute;top:var(--pg,21.8%);bottom:var(--pg,21.8%);width:46%;
+  pointer-events:none;opacity:calc(var(--shade,0) * .62);
+  -webkit-mask-image:linear-gradient(180deg,transparent 0,#000 5.2%,#000 94.8%,transparent 100%);
+  mask-image:linear-gradient(180deg,transparent 0,#000 5.2%,#000 94.8%,transparent 100%);
+}
+.gutter-shade.left{right:0;background:linear-gradient(270deg,rgba(52,38,20,.30),rgba(52,38,20,0) 82%)}
+.gutter-shade.right{left:0;background:linear-gradient(90deg,rgba(52,38,20,.24),rgba(52,38,20,0) 82%)}
+
+/* ---- the turning leaf: nested strips forming a curved surface ---- */
+.curl{
+  position:absolute;top:0;height:100%;
+  width:calc(var(--bw,0px) * var(--span));
+  transform-style:preserve-3d;z-index:6;
+}
+.curl.next{left:50%;transform-origin:left center;transform:rotateY(calc(-1 * var(--tt,0deg)))}
+.curl.prev{right:50%;transform-origin:right center;transform:rotateY(var(--tt,0deg))}
+.strip{
+  position:absolute;top:0;height:100%;
+  width:calc(var(--bw,0px) * var(--span) / var(--n));
+  transform-style:preserve-3d;
+}
+.curl.next .strip{transform-origin:left center}
+.curl.prev .strip{transform-origin:right center}
+.curl.next>.strip{left:0}
+.curl.prev>.strip{right:0;left:auto}
+.curl.next .strip .strip{left:100%;transform:rotateY(var(--td,0deg))}
+.curl.prev .strip .strip{right:100%;transform:rotateY(calc(-1 * var(--td,0deg)))}
+.face{
+  position:absolute;top:0;bottom:0;left:0;right:-1.1px;
+  backface-visibility:hidden;-webkit-backface-visibility:hidden;
+  background-repeat:no-repeat;background-size:var(--bw,0px) auto;
+}
+.face.back{transform:rotateY(180deg)}
+.face .sh,.face .gl{
+  -webkit-mask-image:linear-gradient(180deg,transparent 0,#000 5.2%,#000 94.8%,transparent 100%);
+  mask-image:linear-gradient(180deg,transparent 0,#000 5.2%,#000 94.8%,transparent 100%);
+}
+.strip.edge .face .sh,.strip.edge .face .gl{
+  -webkit-mask-image:linear-gradient(180deg,transparent 0,#000 9%,#000 91%,transparent 100%),var(--hf);
+  mask-image:linear-gradient(180deg,transparent 0,#000 9%,#000 91%,transparent 100%),var(--hf);
+  -webkit-mask-composite:source-in;mask-composite:intersect;
+}
+.curl.next .strip.edge .face.front,.curl.prev .strip.edge .face.back{
+  --hf:linear-gradient(90deg,#000 0 22%,transparent 96%);
+}
+.curl.next .strip.edge .face.back,.curl.prev .strip.edge .face.front{
+  --hf:linear-gradient(270deg,#000 0 22%,transparent 96%);
+}
+.face .sh{position:absolute;left:0;right:0;top:var(--pg,21.8%);bottom:var(--pg,21.8%);pointer-events:none}
+.curl.next .face.front .sh,.curl.prev .face.back .sh{
+  background:linear-gradient(90deg,rgba(58,43,20,var(--a1,0)),rgba(58,43,20,var(--a2,0)));
+}
+.curl.next .face.back .sh,.curl.prev .face.front .sh{
+  background:linear-gradient(90deg,rgba(58,43,20,var(--a2,0)),rgba(58,43,20,var(--a1,0)));
+}
+.face .gl{
+  position:absolute;left:0;right:0;top:var(--pg,21.8%);bottom:var(--pg,21.8%);
+  pointer-events:none;background:#fffaf0;
+  opacity:calc(var(--shade,0) * var(--lit,1) * var(--lit,1) * .20);
+}
+
+/* ---- controls ---- */
+.sb-tools{
+  display:flex;align-items:center;gap:6px;
+  border:1px solid var(--hairline);border-radius:999px;
+  padding:5px 7px;background:rgba(250,246,238,.62);
+  -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+}
+.tool{
+  width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;
+  border:0;border-radius:50%;background:transparent;color:var(--ink-soft);
+  cursor:pointer;transition:background-color .18s ease,color .18s ease;
+}
+.tool:hover{background:rgba(255,252,244,.9);color:var(--ink)}
+.tool[aria-pressed="true"]{background:rgba(154,106,62,.16);color:var(--earth)}
+.tool:disabled{opacity:.32;cursor:default;background:transparent}
+.tool svg{width:15px;height:15px;display:block}
+.tool-sep{width:1px;height:17px;background:var(--hairline);margin:0 2px}
+.zoom-read{
+  font-size:11px;letter-spacing:.1em;color:var(--ink-faint);
+  min-width:40px;text-align:center;font-variant-numeric:tabular-nums;
+}
+
+.sb-zone{position:absolute;top:0;bottom:0;border:0;background:transparent;cursor:grab;z-index:60;-webkit-tap-highlight-color:transparent}
+.sb-zone:active{cursor:grabbing}
+.sb-prev{left:0;width:50%}
+.sb-next{right:0;width:50%}
+
+.sb-captions{display:grid;justify-items:center}
+.sb-captions>*{grid-area:1/1;margin:0}
+.sb-caption{font-size:13px;letter-spacing:.24em;text-transform:uppercase;color:var(--ink-soft);
+  animation:sb-cap-in .5s ease both}
+.sb-caption.live{animation:none}
+@keyframes sb-cap-in{0%{opacity:0}}
+@keyframes sb-cap-out{to{opacity:0}}
+.sb-hint{
+  margin:0;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-faint);
+  transition:opacity .4s ease;
+}
+.sb-hint.gone{opacity:0}
+.sb-wrap.closed .sb-tools{opacity:.35;pointer-events:none}
+@media (max-width:640px){
+  .sb-wrap{width:100vw;margin-inline:calc(50% - 50vw)}
+  .sb-arrow{position:absolute;top:50%;transform:translateY(-50%);z-index:70;padding:12px 6px}
+  .sb-arrow.left{left:2px}
+  .sb-arrow.right{right:2px}
+  .sb-3d{max-width:none}
+  .sb-hint{font-size:9.5px;letter-spacing:.1em;padding:0 16px;text-align:center}
+}
+</style>
+
+<script>
+/* =====================================================================
+   Sketchbook flipbook widget — page-turn logic, cover open/close, tilt/zoom.
+   Spreads are transparent PNGs of an open sketchbook. The leaf that turns
+   is a real curved surface: a chain of nested strips whose tangent sweeps
+   through an arc, so the page bends the way paper bends instead of
+   pivoting like a flat door.
+
+   To reuse: point DIR at your images folder and edit PAGES[]. The only
+   external dependency beyond this block is an element with id="plateList"
+   if you want a clickable index (goTo() is written to support one, but
+   marks()/goTo() degrade gracefully without it).
+   ===================================================================== */
+const Q=new URLSearchParams(location.search);
+const DIR='sketchbook/';
+// EDIT-PER-BOOK: one entry per page-N.png produced by prepare_assets.py,
+// in the same order they were passed to --pages. title/place are just
+// caption text — free to leave blank ('') if you don't want captions.
+const PAGES=[
+  {file:'page-1.png', title:'the spread',  place:''}
+];
+PAGES.forEach(p=>p.url=DIR+p.file);
+
+/* The covers are drawn on the SAME canvas (1760x1240) as a spread, with the
+   closed book's front/back art centered in frame — that's what lets the
+   existing turn machinery (built for spread-to-spread turns) open and
+   close them with no extra rendering logic. Point these at real art. */
+const COVER_FRONT={file:'cover-front.png',title:'',place:'',cover:true};
+const COVER_BACK ={file:'cover-back.png', title:'',place:'',cover:true};
+[COVER_FRONT,COVER_BACK].forEach(p=>p.url=DIR+p.file);
+
+/* SPREADS is the full, BOUNDED sequence the book renders: closed front
+   cover, every page, closed back cover. idx 0 and idx TOTAL-1 are the
+   two closed states — there is no wraparound past them any more. */
+const SPREADS=[COVER_FRONT,...PAGES,COVER_BACK];
+const TOTAL=SPREADS.length, LAND=6;
+function isClosed(i){return i===0||i===TOTAL-1}
+/* -1 = front cover (art on the right, so shrink/shift from the LEFT),
+   +1 = back cover (art on the left, so shrink/shift from the RIGHT), 0 = neither */
+function sideSign(i){return i===0?-1:(i===TOTAL-1?1:0)}
+function setFootprint(footprint,sign){
+  sb3d.style.setProperty('--footprint',footprint.toFixed(3));
+  sb3d.style.setProperty('--fpL',sign<0?footprint.toFixed(3):'0');
+  sb3d.style.setProperty('--fpR',sign>0?footprint.toFixed(3):'0');
+  sb3d.style.setProperty('--shift',(sign*footprint*25).toFixed(2)+'%');
+}
+
+const wrap=document.getElementById('sbWrap');
+const stage=document.getElementById('sbStage');
+const sb3d=document.getElementById('sb3d');
+const book=document.getElementById('sbBook');
+const capBox=document.getElementById('sbCaptions');
+const hint=document.getElementById('sbHint');
+const REDUCED=matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ------------------------------------------------ the turning leaf */
+const N=18;            /* strips — enough for a smooth curve          */
+const SPAN=0.5;        /* gutter → outer page edge, as a fraction of full width.
+                           0.5 = the flap spans the ENTIRE half-page, edge to edge —
+                           needed because full-bleed art has no built-in margin to
+                           hide a shorter flap's gap at the outer edge. */
+const BETA=0.60;       /* peak curl of the arc, radians              */
+const COVER_N=1;       /* one rigid panel — a cover doesn't bend like paper   */
+const COVER_BETA=0;    /* zero bulge: a flat door-swing, not a curling arc    */
+let idx=0, turn=null;  /* turn = {dir, from, to, t}                   */
+let strips=[];         /* the chain, kept for per-frame lighting       */
+
+function el(t,c){const e=document.createElement(t);if(c)e.className=c;return e}
+function imgEl(i,side){
+  const im=new Image();im.className='sb-half-img '+side;
+  im.draggable=false;im.alt='';im.src=SPREADS[i].url;return im;
+}
+
+function halfEl(pos,i){
+  const d=el('div','sb-half '+pos);
+  d.appendChild(imgEl(i,pos));
+  d.appendChild(el('div','gutter-shade '+pos));
+  return d;
+}
+/* build the strip chain once per turn; background offsets are pure
+   geometry, so they never need touching again while it animates */
+function buildCurl(dir,from,to,n){
+  strips=[];
+  const c=el('div','curl '+dir);
+  c.style.setProperty('--n',n);
+  c.style.setProperty('--span',SPAN);
+  let host=c;
+  for(let i=0;i<n;i++){
+    const s=el('div','strip');
+    s.style.setProperty('--i',i);
+    const gut='calc(var(--bw) * 0.5)';
+    const sw='calc(var(--bw) * '+SPAN+' / '+n+')';
+    const A='calc(-1 * ('+gut+' + '+i+' * '+sw+'))';         /* faces the from-page  */
+    const B='calc('+(i+1)+' * '+sw+' - '+gut+')';            /* faces the to-page    */
+    const f=el('div','face front'), b=el('div','face back');
+    const dress=(e,url,px)=>{
+      e.style.backgroundImage='url('+url+')';
+      e.style.backgroundPositionX=px;
+    };
+    dress(f,SPREADS[from].url, dir==='next'?A:B);
+    dress(b,SPREADS[to].url,   dir==='next'?B:A);
+    f.appendChild(el('div','sh'));f.appendChild(el('div','gl'));
+    b.appendChild(el('div','sh'));b.appendChild(el('div','gl'));
+    s.appendChild(f);s.appendChild(b);
+    if(i===n-1)s.classList.add('edge');
+    host.appendChild(s);host=s;
+    strips.push(s);
+  }
+  return c;
+}
+function applyTurn(t){
+  const n=turn.n, beta0=turn.beta;
+  const th=Math.PI*t;                       /* how far the leaf has swung */
+  const beta=beta0*Math.sin(Math.PI*t);     /* it is flat at both ends    */
+  const D=180/Math.PI;
+  const tt=th+beta, td=2*beta/n;
+  sb3d.style.setProperty('--tt',(tt*D).toFixed(2)+'deg');
+  sb3d.style.setProperty('--td',(td*D).toFixed(3)+'deg');
+  sb3d.style.setProperty('--shade',Math.sin(Math.PI*t).toFixed(3));
+  if(turn.cover){
+    /* footprint 1 = collapsed to the closed half-width, 0 = full open spread */
+    const footprint=isClosed(turn.from)?(1-t):t;
+    const sign=isClosed(turn.from)?sideSign(turn.from):sideSign(turn.to);
+    setFootprint(footprint,sign);
+  }else{
+    setFootprint(0,0);
+  }
+  fadeCaption(t);
+  for(let i=0;i<strips.length;i++){
+    const l1=Math.abs(Math.cos(tt-i*td));        /* facing at this strip's near edge */
+    const l2=Math.abs(Math.cos(tt-(i+1)*td));    /* ...and at its far edge           */
+    const st=strips[i].style;
+    st.setProperty('--lit',l1.toFixed(3));
+    st.setProperty('--a1',((1-l1)*.62).toFixed(3));
+    st.setProperty('--a2',((1-l2)*.62).toFixed(3));
+  }
+}
+function paint(){
+  book.textContent='';
+  if(!turn){
+    const f=el('div','sb-full');
+    const im=new Image();im.src=SPREADS[idx].url;im.alt=SPREADS[idx].title||'';
+    im.draggable=false;
+    f.appendChild(im);book.appendChild(f);
+    sb3d.style.setProperty('--shade','0');
+    setFootprint(isClosed(idx)?1:0,sideSign(idx));
+  }else{
+    const next=turn.dir==='next';
+    book.appendChild(halfEl('left', next?turn.from:turn.to));
+    book.appendChild(halfEl('right',next?turn.to:turn.from));
+    book.appendChild(buildCurl(turn.dir,turn.from,turn.to,turn.n));
+    applyTurn(turn.t);
+  }
+  const closedNow=isClosed(turn?turn.to:idx);
+  wrap.classList.toggle('closed',closedNow);
+  if(!hint.classList.contains('gone')){
+    hint.textContent=closedNow?'Tap the cover to open':'Drag the page to turn';
+  }
+  const a=el('button','sb-zone sb-prev'),b=el('button','sb-zone sb-next');
+  a.setAttribute('aria-label','previous page');b.setAttribute('aria-label','next page');
+  book.appendChild(a);book.appendChild(b);
+  layout();
+  caption();
+  marks();
+}
+function caption(){
+  capBox.textContent='';
+  capOut=capIn=null;
+  if(turn){
+    const fromT=SPREADS[turn.from].title, toT=SPREADS[turn.to].title;
+    if(fromT){capOut=el('p','sb-caption live');capOut.textContent=fromT;capBox.appendChild(capOut);}
+    if(toT){capIn=el('p','sb-caption live');capIn.textContent=toT;capBox.appendChild(capIn);}
+    fadeCaption(turn.t);
+  }else{
+    const t=SPREADS[idx].title;
+    if(t){const p=el('p','sb-caption');p.textContent=t;capBox.appendChild(p);}
+  }
+}
+let capOut=null,capIn=null;
+function fadeCaption(t){
+  if(!capOut||!capIn)return;
+  /* the old title is gone before the new one arrives, so they never
+     sit on top of each other mid-drag */
+  const out=1-Math.max(0,Math.min(1,(t-0.10)/0.28));
+  const inn=Math.max(0,Math.min(1,(t-0.56)/0.30));
+  capOut.style.opacity=out.toFixed(3);
+  capIn.style.opacity=inn.toFixed(3);
+}
+function layout(){
+  sb3d.style.setProperty('--bw',book.clientWidth+'px');
+}
+addEventListener('resize',layout);
+
+/* ------------------------------------------------------ spring loop */
+let spring=null;
+function animateTo(target,onDone,stiff,damp){
+  spring={kind:'spring',v:0,target:target,done:onDone,k:stiff||150,c:damp||22};
+  kick();
+}
+/* the riffle wants a fixed tempo, not a spring settling time */
+function tweenTo(target,dur,onDone){
+  spring={kind:'tween',from:turn?turn.t:0,target:target,dur:dur,e:0,done:onDone};
+  kick();
+}
+let raf=null,last=0;
+function tick(now){
+  raf=null;
+  const dt=Math.min(0.032,(now-last)/1000||0.016);last=now;
+  if(spring&&turn){
+    const s=spring;
+    if(s.kind==='tween'){
+      s.e+=dt;
+      const k=Math.min(1,s.e/s.dur);
+      turn.t=s.from+(s.target-s.from)*k;
+      applyTurn(turn.t);
+      if(k>=1){spring=null;const d=s.done;d&&d();}
+    }else{
+      const x=turn.t-s.target;
+      s.v+= (-s.k*x - s.c*s.v)*dt;
+      turn.t+=s.v*dt;
+      if(Math.abs(turn.t-s.target)<0.002&&Math.abs(s.v)<0.02){
+        turn.t=s.target;spring=null;
+        applyTurn(turn.t);
+        const d=s.done;d&&d();
+      }else applyTurn(turn.t);
+    }
+  }
+  viewSpring();
+  /* kick() may already have queued the next frame from a done-callback */
+  if((spring||viewActive)&&raf===null) raf=requestAnimationFrame(tick);
+}
+function kick(){ if(raf===null){last=performance.now();raf=requestAnimationFrame(tick);} }
+
+/* ------------------------------------------- tilt + zoom of the book */
+const TILT_X=4.5, TILT_Y=7;      /* degrees — deliberately restrained   */
+const ZOOM_MIN=0.9, ZOOM_MAX=1.5;
+const view={rx:0,ry:0,z:1, trx:0,try_:0,tz:1};
+let viewActive=false;
+function applyView(){
+  sb3d.style.setProperty('--rx',view.rx.toFixed(2)+'deg');
+  sb3d.style.setProperty('--ry',view.ry.toFixed(2)+'deg');
+  sb3d.style.setProperty('--zoom',view.z.toFixed(3));
+}
+function viewSpring(){
+  const e=0.14;
+  let moved=false;
+  for(const [k,t] of [['rx','trx'],['ry','try_'],['z','tz']]){
+    const d=view[t]-view[k];
+    if(Math.abs(d)>0.0006){view[k]+=d*e;moved=true;}
+    else view[k]=view[t];
+  }
+  if(moved)applyView();
+  viewActive=moved;
+  return moved;
+}
+function setView(rx,ry,z){
+  view.trx=Math.max(-TILT_X,Math.min(TILT_X,rx));
+  view.try_=Math.max(-TILT_Y,Math.min(TILT_Y,ry));
+  view.tz=Math.max(ZOOM_MIN,Math.min(ZOOM_MAX,z));
+  viewActive=true;kick();
+  if(typeof syncZoom==='function')syncZoom();
+}
+/* the book leans toward the cursor — no dragging, and never far */
+function tiltTo(cx,cy){
+  if(drag)return;                       /* hold still while a page is being turned */
+  const r=book.getBoundingClientRect();
+  if(!r.width)return;
+  const nx=Math.max(-1,Math.min(1,(cx-(r.left+r.width/2))/(r.width*0.62)));
+  const ny=Math.max(-1,Math.min(1,(cy-(r.top+r.height/2))/(r.height*0.9)));
+  setView(-ny*TILT_X, nx*TILT_Y, view.tz);
+}
+addEventListener('pointermove',e=>{
+  if(e.pointerType==='touch')return;
+  tiltTo(e.clientX,e.clientY);
+},{passive:true});
+addEventListener('pointerout',e=>{if(!e.relatedTarget)setView(0,0,view.tz)});
+addEventListener('blur',()=>setView(0,0,view.tz));
+/* the wheel belongs to the page — zoom is on the toolbar, or a double click
+   to come back to 100% */
+stage.addEventListener('dblclick',()=>setView(view.trx,view.try_,1));
+
+/* ------------------------------------------------------- pointer work */
+let drag=null;
+function bookRect(){return book.getBoundingClientRect()}
+function hideHint(){hint.classList.add('gone')}
+
+stage.addEventListener('pointerdown',e=>{
+  if(e.button!==0)return;
+  e.preventDefault();                     /* no text selection, no image drag */
+  const onBook=e.target.closest('.sb-zone');
+  stage.setPointerCapture(e.pointerId);
+  hideHint();
+  if(!onBook)return;
+  const r=bookRect();
+  let dir=(e.clientX-r.left)/r.width>0.5?'next':'prev';
+  if(idx===0)dir='next';                /* closed front cover: any tap opens it   */
+  else if(idx===TOTAL-1)dir='prev';     /* closed back cover: any tap opens it    */
+  startTurn(dir,0);
+  drag={dir:dir,x0:e.clientX,w:r.width,moved:0,vel:0,tPrev:performance.now()};
+});
+stage.addEventListener('pointermove',e=>{
+  if(!drag)return;
+  const dx=e.clientX-drag.x0;
+  drag.moved=Math.max(drag.moved,Math.abs(dx));
+  const raw=(drag.dir==='next'? -dx : dx)/(drag.w*0.62);
+  const t=Math.max(0,Math.min(1,raw));
+  const now=performance.now();
+  drag.vel=(t-(turn?turn.t:0))/Math.max(0.001,(now-drag.tPrev)/1000);
+  drag.tPrev=now;
+  if(turn){turn.t=t;applyTurn(t);}
+});
+function endDrag(e){
+  if(!drag)return;
+  const d=drag;drag=null;
+  if(!turn)return;
+  if(d.moved<6){                              /* a tap, not a drag */
+    commit();return;
+  }
+  const go = turn.t>0.42 || d.vel>1.1;
+  if(go)commit(); else cancel();
+}
+stage.addEventListener('dragstart',e=>e.preventDefault());
+stage.addEventListener('selectstart',e=>e.preventDefault());
+stage.addEventListener('pointerup',endDrag);
+stage.addEventListener('pointercancel',endDrag);
+
+/* ------------------------------------------------------ turn control */
+function startTurn(dir,t){
+  spring=null;
+  if(turn){idx=turn.to;turn=null;}      /* settle anything still in flight */
+  const from=idx;
+  const to=dir==='next'?Math.min(from+1,TOTAL-1):Math.max(from-1,0);
+  if(to===from)return;                  /* fully closed/open at this end — nothing to turn */
+  const cover=isClosed(from)||isClosed(to);
+  turn={dir:dir,from:from,to:to,t:t||0,n:cover?COVER_N:N,beta:cover?COVER_BETA:BETA,cover:cover};
+  paint();
+}
+function commit(){
+  if(!turn)return;
+  if(REDUCED){idx=turn.to;turn=null;paint();return;}
+  animateTo(1,()=>{idx=turn.to;turn=null;paint();},170,26);
+  kick();
+}
+function cancel(){
+  if(!turn)return;
+  animateTo(0,()=>{turn=null;paint();},150,24);
+  kick();
+}
+function step(dir){
+  if(turn){ /* finish whatever is in flight first */ idx=turn.to;turn=null; }
+  startTurn(dir,0);commit();
+}
+function goTo(i){
+  i=Math.max(0,Math.min(TOTAL-1,i));
+  if(i===idx)return;
+  if(turn){idx=turn.to;turn=null;}
+  if(Math.abs(i-idx)===1){step(i>idx?'next':'prev');return;}
+  idx=i;paint();
+}
+document.getElementById('sbLeft').onclick=()=>step('prev');
+document.getElementById('sbRight').onclick=()=>step('next');
+addEventListener('keydown',e=>{
+  if(e.key!=='ArrowLeft'&&e.key!=='ArrowRight')return;
+  if(e.metaKey||e.ctrlKey||e.altKey)return;
+  const t=e.target;
+  if(t&&(t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.isContentEditable))return;
+  e.preventDefault();hideHint();
+  step(e.key==='ArrowRight'?'next':'prev');
+});
+
+/* --------------------------------------------------- zoom controls */
+const zRead=document.getElementById('zRead');
+const zInBtn=document.getElementById('zIn'), zOutBtn=document.getElementById('zOut');
+
+function syncZoom(){
+  zRead.textContent=Math.round(view.tz*100)+'%';
+  zOutBtn.disabled=view.tz<=ZOOM_MIN+0.001;
+  zInBtn.disabled=view.tz>=ZOOM_MAX-0.001;
+}
+zInBtn.onclick=()=>{setView(view.trx,view.try_,view.tz*1.16);hideHint();};
+zOutBtn.onclick=()=>{setView(view.trx,view.try_,view.tz/1.16);hideHint();};
+
+/* --------------------------------------------------------- the index
+   Optional: only relevant if you render an index/table-of-contents list.
+   marks() and goTo() are written to be safe if #plateList doesn't exist. */
+function marks(){
+  const cur=turn?turn.to:idx;
+  document.querySelectorAll('#plateList .plate').forEach((b,i)=>b.setAttribute('aria-current',i===cur?'true':'false'));
+  const atFront=idx<=0&&!turn, atBack=idx>=TOTAL-1&&!turn;
+  document.getElementById('sbLeft').disabled=atFront;
+  document.getElementById('sbRight').disabled=atBack;
+}
+
+/* ------------------------------------------------------------- boot */
+(async function boot(){
+  idx=Q.has('shot')?Math.max(0,Math.min(TOTAL-1,parseInt(Q.get('shot'),10)||0)):0;
+  paint();applyView();
+  await Promise.all(SPREADS.map(p=>{
+    const im=new Image();im.src=p.url;
+    return im.decode?im.decode().catch(()=>{}):new Promise(r=>{im.onload=im.onerror=r});
+  }));
+  if(document.fonts&&document.fonts.ready)await document.fonts.ready.catch(()=>{});
+  syncZoom();
+  document.body.dataset.ready='1';
+  if(Q.has('shot')&&Q.has('t')){startTurn(Q.get('dir')||'next',parseFloat(Q.get('t')));}
+  /* no auto-intro: the book just sits closed, ready to be tapped open */
+})();
+</script>
+</body>
+</html>
+
