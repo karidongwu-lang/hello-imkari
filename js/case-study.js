@@ -188,7 +188,10 @@ export function renderCaseStudy(mainEl, sidebarEl, p) {
     `<img class="prv-hero-img" src="${p.heroImage}" alt="${esc(p.title)}" />` +
     "</section>";
 
-  const allProjects = window.PROJECTS || [];
+  // 3miu and blink are out of rotation — no notecard on the mat points
+  // at either, so they're excluded here too rather than being
+  // reachable only by cycling past every other project.
+  const allProjects = (window.PROJECTS || []).filter((x) => x.id !== "3miu" && x.id !== "blink");
   const idx = allProjects.findIndex((x) => x.id === p.id);
   const prevProject = allProjects.length ? allProjects[(idx - 1 + allProjects.length) % allProjects.length] : null;
   const nextProject = allProjects.length ? allProjects[(idx + 1) % allProjects.length] : null;

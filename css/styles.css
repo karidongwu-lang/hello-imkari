@@ -98,9 +98,16 @@ img { display: block; max-width: 100%; }
   transition: padding 0.5s var(--ease);
 }
 
+/* how much of the mat stays visible as the "nav bar" strip once fully
+   scroll-locked — 10.4vh reveals down to the 4th cutting-mat grid line
+   from the bottom (measured directly off cuttingmat.svg: that line
+   sits 11.31% of the mat's own height up from its bottom edge, and the
+   mat itself renders at ~92vh whenever the viewport is the limiting
+   dimension, so 0.1131 * 92vh ≈ 10.4vh). Keep in sync with the
+   matching constant in js/work.js's scrollProgress(). */
 .mat-frame--sticky {
   position: sticky;
-  top: calc(-100vh + 150px);
+  top: calc(-100vh + 10.4vh);
 }
 
 /* Once fully parked/stuck (js/work.js adds .stuck-flush only at scroll
@@ -126,6 +133,13 @@ img { display: block; max-width: 100%; }
   max-width: calc(92vh * 1.6825);
   aspect-ratio: 1605.69 / 954.18;
   transition: max-width 0.5s var(--ease), aspect-ratio 0.5s var(--ease);
+}
+
+/* lets the centered notecard tilt in 3D toward the cursor, same as the
+   sketchbook widget's own pointer-tilt and the art landing page's stack */
+#work-mat {
+  perspective: 1750px;
+  perspective-origin: 50% 46%;
 }
 
 .mat-bg {
@@ -167,6 +181,8 @@ img { display: block; max-width: 100%; }
   z-index: 1;
   opacity: 0;
   transition: opacity 0.4s var(--ease);
+  /* invisible (opacity:0) in the "cover" state, so it shouldn't be
+     clickable until it's actually shown post-expand */
   pointer-events: none;
 }
 
@@ -202,6 +218,22 @@ img { display: block; max-width: 100%; }
   transition: opacity 0.5s var(--ease), transform 0.5s var(--ease), visibility 0s linear 0.5s;
 }
 
+/* About's own canvas is narrower/taller (1536/1240, see sketchbook.css's
+   matching #about-book .sb-book override) than the shared 1760/1240
+   ratio this base rule assumes — left as-is, the mount's own declared
+   box stays sized off the OLD wider ratio while its actual content
+   (driven by .sb-book's real aspect-ratio) renders taller, so it simply
+   overflows the mount's box instead of being a deliberate size. Give it
+   its own aspect-ratio to match, and a width recalculated so its
+   rendered HEIGHT comes out equal to Work/Art's (61.8% / (1760/1240)),
+   re-centered — same book size as the other two, just narrower/taller
+   in its own proportions instead of matching their width. */
+#about-book {
+  width: 53.93%;
+  left: 23.04%;
+  aspect-ratio: 1536 / 1240;
+}
+
 .sketchbook-mount.dropped {
   opacity: 0;
   visibility: hidden;
@@ -217,7 +249,7 @@ img { display: block; max-width: 100%; }
   pointer-events: none;
   transition: opacity 0.5s var(--ease) 0.2s;
 }
-.notecards.show { opacity: 1; pointer-events: auto; }
+.notecards.show { opacity: 1; }
 
 .notecard {
   position: absolute;
@@ -227,6 +259,18 @@ img { display: block; max-width: 100%; }
   transform: translate(-50%, -50%) rotate(var(--r));
   filter: drop-shadow(0px 4px 4px rgba(0, 0, 0, 0.25));
   transition: transform 0.6s var(--ease), opacity 0.5s var(--ease), left 0.6s var(--ease), top 0.6s var(--ease), width 0.6s var(--ease);
+  /* pointer-events only turns on once the container is actually shown
+     (below) — left unconditional, these buttons stay clickable even
+     while invisible (opacity:0 doesn't affect pointer-events), and
+     since .notecards' z-index:3 beats .sketchbook-mount's z-index:2 at
+     their shared ancestor, that invisible hit-box sits ABOVE THE WHOLE
+     BOOK regardless of sb-zone's own higher z-index (trapped inside the
+     mount's own, lower-priority stacking context) — silently eating
+     the click meant to open the closed cover. */
+  pointer-events: none;
+}
+.notecards.show .notecard {
+  pointer-events: auto;
 }
 
 .notecard img { width: 100%; }
@@ -245,7 +289,7 @@ img { display: block; max-width: 100%; }
   left: 50%;
   top: 56%;
   width: 22%;
-  transform: translate(-50%, -50%) rotate(0deg);
+  transform: translate(-50%, -50%) rotate(0deg) rotateX(var(--card-rx, 0deg)) rotateY(var(--card-ry, 0deg));
   z-index: 6;
 }
 
@@ -261,17 +305,29 @@ img { display: block; max-width: 100%; }
   inset: 0;
   z-index: 1;
 }
-.mat--art { transition: transform 0.7s var(--ease); }
+.mat--art {
+  transition: transform 0.7s var(--ease);
+  /* lets the scattered stack tilt in 3D toward the cursor, same as the
+     sketchbook widget's own pointer-tilt (js/sketchbook.js tiltTo) */
+  perspective: 1750px;
+  perspective-origin: 50% 46%;
+}
 #tab-art[data-state="expanded"] .mat--art { transform: scale(1.3); }
 
 #tab-art[data-state="expanded"] .headline { opacity: 0; }
-#tab-art[data-state="expanded"] .art-logo { opacity: 1; }
+#tab-art[data-state="expanded"] .art-logo { opacity: 1; pointer-events: auto; cursor: pointer; }
 
 .art-scatter {
   position: absolute;
   inset: 0;
   z-index: 2;
+  transform: rotateX(var(--art-rx, 0deg)) rotateY(var(--art-ry, 0deg));
   transition: opacity 0.5s var(--ease), transform 0.5s var(--ease);
+}
+/* faster, direct-feeling response while actually tracking the cursor;
+   the slower 0.5s above is for the opacity/scale state changes instead */
+#tab-art[data-state="cover"] .art-scatter {
+  transition: opacity 0.5s var(--ease), transform 0.15s ease-out;
 }
 
 .scatter-img {
@@ -293,11 +349,18 @@ img { display: block; max-width: 100%; }
   transform: translate(-50%, -50%);
   z-index: 4;
   box-shadow: inset 4px 6px 3px rgba(255, 255, 255, 0.3), inset -7px -8px 4px rgba(0, 0, 0, 0.25), 0 6px 18px rgba(0, 0, 0, 0.4);
-  border-radius: 4%;
+  /* matches the notebook-spine convention used elsewhere (sb-full in
+     css/sketchbook.css): only the outer/right edge is rounded */
+  border-radius: 0 1.8% 1.8% 0;
   overflow: hidden;
   transition: transform 0.6s var(--ease);
 }
 .art-cover img { border-radius: inherit; }
+
+/* the cover keeps this same rounding once it's moved into the grid as
+   a bare <img> (see makeImg() in js/art.js) — that move leaves the
+   .art-cover wrapper (and its border-radius) behind */
+.art-cover-thumb { border-radius: 0 1.8% 1.8% 0; }
 
 /* normal document flow (not absolute) so its real content height makes
    the page scrollable while the background stays fixed behind it — see
@@ -360,14 +423,79 @@ img { display: block; max-width: 100%; }
   transition: opacity 0.3s var(--ease);
 }
 .art-lightbox.open { opacity: 1; pointer-events: auto; }
-.art-lightbox img {
+.art-lightbox-frame {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   max-width: 88vw;
   max-height: 88vh;
+  cursor: zoom-out;
+}
+.art-lightbox img {
+  max-width: 88vw;
+  max-height: 76vh;
   width: auto;
   height: auto;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
-  cursor: zoom-out;
 }
+.art-lightbox-caption {
+  margin-top: 1.1em;
+  text-align: center;
+  color: #fff;
+}
+.art-lightbox-title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.art-lightbox-title:empty { display: none; }
+.art-lightbox-meta {
+  margin: 0.25em 0 0;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+.art-lightbox-meta:empty { display: none; }
+
+/* ---------- flippable sketchbook overlay for the "sketchbook" grid
+   tile — big and centered like the plain lightbox, but hosts the same
+   flipbook widget the landing pages use instead of a static image ---------- */
+.art-book-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.85);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s var(--ease);
+}
+.art-book-lightbox.open { opacity: 1; pointer-events: auto; }
+.art-book-lightbox-frame {
+  width: min(80vw, 1200px);
+}
+/* overrides .sketchbook-mount's absolute positioning, which assumes
+   it's placed inside a .mat — here it just fills its own frame */
+#art-book-mount {
+  position: relative;
+  left: auto;
+  top: auto;
+  width: 100%;
+  aspect-ratio: 1760 / 1240;
+}
+.art-book-lightbox-close {
+  position: absolute;
+  top: 24px;
+  right: 32px;
+  color: #fff;
+  font-size: 2.2rem;
+  line-height: 1;
+  z-index: 2;
+  transition: opacity 0.15s;
+}
+.art-book-lightbox-close:hover { opacity: 0.7; }
 
 #tab-art[data-state="expanded"] .art-scatter {
   opacity: 0;
@@ -383,6 +511,23 @@ img { display: block; max-width: 100%; }
 }
 
 #tab-art[data-state="expanded"] .sub-nav { opacity: 1; }
+
+/* "check out my studies!" prompt at the bottom of the illustrations
+   grid — nudges visitors toward the sketches/studies sub-nav section */
+.art-cta {
+  position: relative;
+  z-index: 2;
+  display: block;
+  margin: -4vh auto 8vh;
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--gold);
+  text-align: center;
+  transition: opacity 0.15s;
+}
+.art-cta:hover { opacity: 0.7; }
+.art-cta[hidden] { display: none; }
 
 /* nav/back/sub-nav for the art tab live outside .mat (see index.html) so
    they stay above the fixed background and the scrolling gallery, always
@@ -412,15 +557,15 @@ img { display: block; max-width: 100%; }
   width: 27.8%;
   height: 73.3%;
   z-index: 5;
+  cursor: pointer;
 }
-#tab-about[data-state="closed"] .polaroid-trigger,
-#tab-about[data-state="expanded"] .polaroid-trigger { display: none; }
+#tab-about[data-state="closed"] .polaroid-trigger { display: none; }
 
 .polaroids {
   position: absolute;
-  right: 22.8%;
+  right: 27%;
   top: 53.5%;
-  width: 16%;
+  width: 13.5%;
   transform: translateY(-50%);
   z-index: 4;
   opacity: 0;
@@ -428,8 +573,7 @@ img { display: block; max-width: 100%; }
   transition: opacity 0.4s var(--ease);
 }
 
-#tab-about[data-state="open"] .polaroids,
-#tab-about[data-state="expanded"] .polaroids {
+#tab-about[data-state="open"] .polaroids {
   opacity: 1;
   pointer-events: auto;
 }
@@ -440,58 +584,27 @@ img { display: block; max-width: 100%; }
   top: 50%;
   width: 100%;
   transform: translateY(-50%) rotate(var(--r)) translate(var(--ox), var(--oy));
-  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.3);
+  /* box-shadow follows the IMG's full bounding box regardless of
+     transparency, but these source photos have a soft alpha feather
+     (~10-40px) around the actual visible polaroid edge — so a
+     box-shadow left a visible transparent gap between the real edge
+     and where the shadow started. filter:drop-shadow instead follows
+     the actual alpha shape of the image content, same fix already used
+     for .notecard below. */
+  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.3));
   transition: transform 0.6s var(--ease), left 0.6s var(--ease), top 0.6s var(--ease);
 }
 
+/* Slot 0 is always the top/front card. Cycling which photo currently
+   occupies which slot (about.js reassigns data-i on click) is what
+   makes clicking the stack look like flipping through it — the actual
+   position/rotation per slot never changes, only which <img> is in it,
+   and the existing transform/left/top transition on .polaroid animates
+   that move. */
 .polaroid[data-i="0"] { --r: -8deg; --ox: -6%; --oy: -30%; z-index: 4; }
 .polaroid[data-i="1"] { --r: 5deg; --ox: 8%; --oy: -8%; z-index: 3; }
 .polaroid[data-i="2"] { --r: -4deg; --ox: -4%; --oy: 14%; z-index: 2; }
 .polaroid[data-i="3"] { --r: 7deg; --ox: 6%; --oy: 34%; z-index: 1; }
-
-/* Expanded state breaks out of .mat's own box entirely (fixed to the
-   viewport, not absolute-within-mat) so the column clips at the top/
-   bottom of the actual webpage instead of wherever the notebook's card
-   happens to end — the notebook is nowhere near full-page height, so
-   staying mat-relative here was what cut the column off early. */
-#tab-about[data-state="expanded"] .polaroids {
-  position: fixed;
-  right: 9vw;
-  top: 0;
-  bottom: 0;
-  width: 15vw;
-  height: auto;
-  transform: none;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4vh;
-  padding: 6vh 0;
-  scroll-snap-type: y proximity;
-  /* scrollable for overflow, but no visible scrollbar "bar" on the side */
-  scrollbar-width: none;
-}
-#tab-about[data-state="expanded"] .polaroids::-webkit-scrollbar {
-  display: none;
-}
-
-/* forces closing to go through the back button's staged expanded->open
-   (recluster) -> open->closed logic, instead of letting a click land
-   directly on the book and skip straight to closed while polaroids are
-   still spread out in their column */
-#tab-about[data-state="expanded"] .sketchbook-mount {
-  pointer-events: none;
-}
-
-#tab-about[data-state="expanded"] .polaroid {
-  position: relative;
-  left: auto;
-  top: auto;
-  transform: none !important;
-  flex: 0 0 auto;
-  scroll-snap-align: center;
-}
 
 /* ---------- small screens: scale everything down gracefully ---------- */
 

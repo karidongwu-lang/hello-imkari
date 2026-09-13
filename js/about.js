@@ -1,4 +1,4 @@
-import { createSketchbook } from "./sketchbook.js";
+import { createSketchbook } from "./sketchbook.js?v=7";
 
 export function initAbout() {
   const tab = document.getElementById("tab-about");
@@ -7,76 +7,45 @@ export function initAbout() {
   const backBtn = document.getElementById("about-back");
   const polaroids = document.getElementById("polaroids");
 
-  // Centers the scrollable polaroid column on the middle of the right
-  // page of the open spread. The mount's on-screen size/position can't
-  // be known from CSS alone (it depends on the aspect-ratio math in
-  // .mat/.mat-frame), so this reads the real rect and pins the column
-  // there with an inline left/transform, rather than guessing a fixed
-  // viewport-relative offset that would drift off the spread at other
-  // viewport sizes.
-  function positionPolaroidColumn() {
-    if (tab.dataset.state !== "expanded") return;
-    const r = mount.getBoundingClientRect();
-    const rightHalfCenter = r.left + r.width * 0.75;
-    polaroids.style.left = `${rightHalfCenter}px`;
-    polaroids.style.transform = "translateX(-50%)";
+  // Clicking the stack doesn't expand it into a list — it just cycles
+  // which photo is on top, like flipping through a small handheld pile:
+  // the front card (data-i="0") moves to the back, everyone else shifts
+  // forward one slot. The four slot positions/rotations are fixed in
+  // CSS (.polaroid[data-i="N"]); only which <img> currently occupies
+  // slot 0 vs slot 3 changes, so the existing transform/left/top
+  // transition on .polaroid animates the "flip" for free.
+  const polaroidEls = Array.from(polaroids.querySelectorAll(".polaroid"));
+  function cyclePolaroids() {
+    const ordered = [...polaroidEls].sort((a, b) => Number(a.dataset.i) - Number(b.dataset.i));
+    const front = ordered.shift();
+    ordered.forEach((el, i) => (el.dataset.i = String(i)));
+    front.dataset.i = String(ordered.length);
   }
-  addEventListener("resize", positionPolaroidColumn);
-
-  // sketchbook.js's own left/right arrow-key page-turning lives on
-  // `window` and knows nothing about our "expanded" lock — it isn't
-  // gated by the pointer-events:none we put on the mount (that only
-  // blocks pointer/touch input), so an arrow key while expanded could
-  // still flip the book closed underneath the still-spread-out
-  // polaroids. Swallow it in the capture phase (which always runs
-  // before that bubble-phase listener) so the only way to close is
-  // still the back button's staged recluster-then-close.
-  addEventListener(
-    "keydown",
-    (e) => {
-      if (tab.dataset.state === "expanded" && (e.key === "ArrowLeft" || e.key === "ArrowRight")) {
-        e.stopImmediatePropagation();
-      }
-    },
-    true
-  );
+  function resetPolaroidOrder() {
+    polaroidEls.forEach((el, i) => (el.dataset.i = String(i)));
+  }
 
   const book = createSketchbook(mount, {
     dir: "assets/sketchbook-about/",
     pages: [{ file: "page-1.png", title: "", place: "" }],
     coverFront: "cover-front.png",
     coverBack: "cover-back.png",
-    v: "12",
+    v: "21",
     onToggle(isOpen) {
-      // While expanded, ignore a spurious "still open" repaint (that
-      // should just stay expanded) — but if the book somehow ends up
-      // closed anyway, don't leave the state stuck on "expanded" with
-      // the polaroid column floating over a closed cover forever.
-      if (tab.dataset.state === "expanded" && isOpen) return;
       tab.dataset.state = isOpen ? "open" : "closed";
       if (backBtn) backBtn.hidden = !isOpen;
-      if (!isOpen) {
-        polaroids.style.left = "";
-        polaroids.style.transform = "";
-      }
+      // fresh order each time the book is (re)opened, so "i love the
+      // metro" is always the first thing on top rather than wherever
+      // a previous visit left the cycle
+      if (!isOpen) resetPolaroidOrder();
     },
   });
 
   trigger.addEventListener("click", () => {
-    if (tab.dataset.state === "open") {
-      tab.dataset.state = "expanded";
-      if (backBtn) backBtn.hidden = false;
-      positionPolaroidColumn();
-    }
+    if (tab.dataset.state === "open") cyclePolaroids();
   });
 
   backBtn?.addEventListener("click", () => {
-    if (tab.dataset.state === "expanded") {
-      tab.dataset.state = "open";
-      polaroids.style.left = "";
-      polaroids.style.transform = "";
-    } else if (tab.dataset.state === "open") {
-      book.goTo(0);
-    }
+    if (tab.dataset.state === "open") book.goTo(0);
   });
 }

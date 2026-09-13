@@ -41,6 +41,12 @@
   will-change: transform;
 }
 .sb-book { position: relative; width: 100%; aspect-ratio: 1760/1240; transform-style: preserve-3d; z-index: 1; }
+/* About's own cover/page photos have a noticeably different natural
+   ratio than 1760x1240 (see sketchbook-template/scripts/prepare_assets.py's
+   `canvas` param) — its assets are generated at 1536x1240 to match them
+   instead of cropping or padding those photos to fit the shared ratio.
+   Keep this in sync with whatever `canvas=` was passed for that book. */
+#about-book .sb-book { aspect-ratio: 1536/1240; }
 
 .sb-cast { position: absolute; pointer-events: none; z-index: 0; }
 .sb-cast.ambient {
@@ -68,12 +74,15 @@
   -webkit-transform: translateZ(0);
   transform: translateZ(0);
 }
-/* the real notebook's outer (right) edge is rounded; the spine (left)
-   stays square while closed (a cover's left side is the bound spine) —
-   but once open, both left and right are exposed page edges, so the
-   open spread rounds on both sides */
-.sb-full { position: absolute; inset: 0; background: transparent; border-radius: 0 3% 3% 0; overflow: hidden; }
-.sb-wrap:not(.closed) .sb-full { border-radius: 3%; }
+/* Corner rounding used to live here (border-radius + overflow:hidden),
+   but that clipping didn't reliably hold up on the sketchbook's 3D
+   page-turn transforms — a square image corner could show through as a
+   "white border" right at the edge during/after a flip. It's baked
+   into the actual image pixels now instead (see round_corners() in
+   sketchbook-template/scripts/prepare_assets.py), which renders
+   correctly regardless of what 3D context it's composited into, so
+   there's nothing left to clip here. */
+.sb-full { position: absolute; inset: 0; background: transparent; }
 .sb-full img {
   width: 100%; height: auto; display: block;
   -webkit-transform: translateZ(0);
@@ -82,7 +91,16 @@
 .sb-half { position: absolute; top: 0; bottom: 0; width: 50%; overflow-x: clip; overflow-y: visible; }
 .sb-half.left { left: 0; }
 .sb-half.right { left: 50%; }
-.sb-half-img { width: 200%; max-width: none; height: auto; display: block; }
+/* same fix as .sb-full img above — this is the other place a page
+   image actually renders (the two static halves shown for the whole
+   duration of a turn, not just the settled single-page view), and it
+   was missing the fix, which is exactly why a rasterization glitch
+   would show up specifically during/around a flip and not otherwise */
+.sb-half-img {
+  width: 200%; max-width: none; height: auto; display: block;
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+}
 .sb-half-img.right { margin-left: -100%; }
 .gutter-shade {
   position: absolute; top: var(--pg, 21.8%); bottom: var(--pg, 21.8%); width: 46%;
@@ -94,21 +112,31 @@
 .gutter-shade.right { left: 0; background: linear-gradient(90deg, rgba(52, 38, 20, 0.24), rgba(52, 38, 20, 0) 82%); }
 
 .curl { position: absolute; top: 0; height: 100%; width: calc(var(--bw, 0px) * var(--span)); transform-style: preserve-3d; z-index: 6; }
-.curl.next { left: 50%; transform-origin: left center; transform: rotateY(calc(-1 * var(--tt, 0deg))); }
-.curl.prev { right: 50%; transform-origin: right center; transform: rotateY(var(--tt, 0deg)); }
-.strip { position: absolute; top: 0; height: 100%; width: calc(var(--bw, 0px) * var(--span) / var(--n)); transform-style: preserve-3d; }
+/* translateZ(0) chained onto every transform in this curl hierarchy —
+   same rasterization risk as .sb-full img / .sb-half-img (nested
+   preserve-3d + perspective can rasterize a transparent PNG incorrectly
+   for the length of a transform animation and briefly after), just
+   caught later here because it only actually shows up as a visible
+   seam on a half-width cover image sitting next to a full-bleed page —
+   chained rather than a separate rule since each of these already
+   carries its own real rotateY, and a second `transform` declaration
+   would just overwrite it instead of combining. */
+.curl.next { left: 50%; transform-origin: left center; transform: rotateY(calc(-1 * var(--tt, 0deg))) translateZ(0); }
+.curl.prev { right: 50%; transform-origin: right center; transform: rotateY(var(--tt, 0deg)) translateZ(0); }
+.strip { position: absolute; top: 0; height: 100%; width: calc(var(--bw, 0px) * var(--span) / var(--n)); transform-style: preserve-3d; transform: translateZ(0); }
 .curl.next .strip { transform-origin: left center; }
 .curl.prev .strip { transform-origin: right center; }
 .curl.next > .strip { left: 0; }
 .curl.prev > .strip { right: 0; left: auto; }
-.curl.next .strip .strip { left: 100%; transform: rotateY(var(--td, 0deg)); }
-.curl.prev .strip .strip { right: 100%; transform: rotateY(calc(-1 * var(--td, 0deg))); }
+.curl.next .strip .strip { left: 100%; transform: rotateY(var(--td, 0deg)) translateZ(0); }
+.curl.prev .strip .strip { right: 100%; transform: rotateY(calc(-1 * var(--td, 0deg))) translateZ(0); }
 .face {
   position: absolute; top: 0; bottom: 0; left: 0; right: -1.1px;
   backface-visibility: hidden; -webkit-backface-visibility: hidden;
   background-repeat: no-repeat; background-size: var(--bw, 0px) auto;
+  transform: translateZ(0);
 }
-.face.back { transform: rotateY(180deg); }
+.face.back { transform: rotateY(180deg) translateZ(0); }
 .face .sh,
 .face .gl {
   -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 5.2%, #000 94.8%, transparent 100%);

@@ -1,17 +1,24 @@
-import { lerp, clamp } from "./util.js";
-import { createSketchbook } from "./sketchbook.js";
-import { renderCaseStudy } from "./case-study.js";
+import { lerp, clamp } from "./util.js?v=1";
+import { createSketchbook } from "./sketchbook.js?v=7";
+import { renderCaseStudy } from "./case-study.js?v=3";
 
 // Percentages are relative to the full .mat box.
 const REST = { cx: 50, cy: 56, w: 22, rot: 0 };
-// Once the mat-frame is fully stuck, only its bottom ~150px strip is
-// visible on screen, so the "parked" spot must sit near the mat's own
-// bottom edge (not its top) for the card to land inside that strip.
-const PARKED = { cx: 9, cy: 100, w: 26, rot: -12 };
+// Once the mat-frame is fully stuck, only its bottom strip is visible
+// on screen — 10.4% of the viewport height, matching
+// css/styles.css's .mat-frame--sticky top offset — so the "parked"
+// spot must sit near the mat's own bottom edge (not its top) for the
+// card to land inside that strip.
+const PARKED = { cx: 7, cy: 102, w: 26, rot: -12 };
+const STUCK_STRIP_VH = 0.104;
+function stuckStripPx() {
+  return window.innerHeight * STUCK_STRIP_VH;
+}
 
 export function initWork() {
   const tab = document.getElementById("tab-work");
   const matFrame = document.getElementById("work-hero");
+  const mat = document.getElementById("work-mat");
   const mount = document.getElementById("work-book");
   const notecardsEl = document.getElementById("notecards");
   const caseStudy = document.getElementById("case-study");
@@ -28,7 +35,7 @@ export function initWork() {
     pages: [{ file: "page-1.png", title: "", place: "" }],
     coverFront: "cover-front.png",
     coverBack: "cover-back.png",
-    v: "9",
+    v: "16",
     onToggle(isOpen) {
       bookOpen = isOpen;
       tab.dataset.state = selectedCard ? "selected" : isOpen ? "open" : "closed";
@@ -38,7 +45,40 @@ export function initWork() {
     },
   });
 
+  // Same slight pointer-tilt the sketchbooks (and the art landing page)
+  // have, but only while the picked card is still resting in the
+  // middle — once scrolling starts parking it into the corner, the lerp
+  // in applyScroll takes over the rest of its transform and the card is
+  // too small there for a tilt to read as anything but noise.
+  const TILT_X = 4.5,
+    TILT_Y = 7;
+  function resetTilt(card) {
+    card?.style.setProperty("--card-rx", "0deg");
+    card?.style.setProperty("--card-ry", "0deg");
+  }
+  function tiltTo(cx, cy) {
+    if (tab.dataset.state !== "selected" || !selectedCard || scrollProgress() > 0.05) return;
+    const r = mat.getBoundingClientRect();
+    if (!r.width) return;
+    const nx = Math.max(-1, Math.min(1, (cx - (r.left + r.width / 2)) / (r.width * 0.62)));
+    const ny = Math.max(-1, Math.min(1, (cy - (r.top + r.height / 2)) / (r.height * 0.9)));
+    selectedCard.style.setProperty("--card-rx", (-ny * TILT_X).toFixed(2) + "deg");
+    selectedCard.style.setProperty("--card-ry", (nx * TILT_Y).toFixed(2) + "deg");
+  }
+  addEventListener(
+    "pointermove",
+    (e) => {
+      if (e.pointerType === "touch") return;
+      tiltTo(e.clientX, e.clientY);
+    },
+    { passive: true }
+  );
+  addEventListener("pointerout", (e) => {
+    if (!e.relatedTarget) resetTilt(selectedCard);
+  });
+
   function selectProject(id, card) {
+    resetTilt(selectedCard);
     selectedCard = card || null;
     tab.dataset.state = "selected";
     caseStudy.hidden = false;
@@ -75,6 +115,7 @@ export function initWork() {
     notecardsEl.querySelectorAll(".notecard").forEach((c) => {
       c.classList.remove("notecard--selected", "notecard--dropped");
       c.style.left = c.style.top = c.style.width = c.style.transform = c.style.transition = "";
+      resetTilt(c);
     });
     headline.style.opacity = "";
   }
@@ -88,7 +129,19 @@ export function initWork() {
   function goToProject(id) {
     const card = notecardsEl.querySelector(`.notecard[data-card="${id}"]`);
     selectProject(id, card);
-    window.scrollTo({ top: caseStudy.offsetTop });
+    // Landing exactly on caseStudy.offsetTop put the hero title right
+    // behind the still-visible sticky mat strip (the mat sits above the
+    // content, z-index-wise, at whatever scroll position lands there) —
+    // scroll so the title itself clears that strip, however tall it
+    // currently is. The title sits closer to the top of the hero than
+    // the strip is tall, so this needs LESS scroll than offsetTop, not
+    // more — the floor below only guarantees the card stays fully
+    // parked (scrollProgress() == 1), it isn't "at least offsetTop".
+    const h1 = caseStudy.querySelector("h1");
+    const h1Top = h1 ? h1.getBoundingClientRect().top + window.scrollY : caseStudy.offsetTop;
+    const parkedFloor = window.innerHeight - stuckStripPx();
+    const target = Math.max(parkedFloor, h1Top - stuckStripPx() - 16);
+    window.scrollTo({ top: target });
     requestAnimationFrame(applyScroll);
   }
 
@@ -115,11 +168,11 @@ export function initWork() {
   });
 
   // Tied to the sticky hero's own collapse distance (its CSS pins it at
-  // `top: calc(-100vh + 150px)`), not to the spacer's height — so the
+  // `top: calc(-100vh + 10.4vh)`), not to the spacer's height — so the
   // notecard-parking animation always finishes exactly as the mat
   // finishes visually collapsing, regardless of how tall the spacer is.
   function scrollProgress() {
-    const dist = Math.max(1, window.innerHeight - 150);
+    const dist = Math.max(1, window.innerHeight - stuckStripPx());
     return clamp(window.scrollY / dist, 0, 1);
   }
 
@@ -129,10 +182,10 @@ export function initWork() {
   // so it can never drift back into overlapping the card.
   function updateSidebar() {
     const heroImg = caseStudy.querySelector(".prv-hero-img");
-    const pastHero = !!heroImg && heroImg.getBoundingClientRect().bottom <= 160;
+    const pastHero = !!heroImg && heroImg.getBoundingClientRect().bottom <= stuckStripPx() + 10;
     caseStudySidebar.classList.toggle("visible", pastHero);
     if (!pastHero) return;
-    const anchorBottom = selectedCard ? selectedCard.getBoundingClientRect().bottom : 150;
+    const anchorBottom = selectedCard ? selectedCard.getBoundingClientRect().bottom : stuckStripPx();
     caseStudySidebar.style.top = `${Math.max(96, anchorBottom + 24)}px`;
   }
 
@@ -152,7 +205,7 @@ export function initWork() {
       selectedCard.style.left = `${lerp(REST.cx, PARKED.cx, p)}%`;
       selectedCard.style.top = `${lerp(REST.cy, PARKED.cy, p)}%`;
       selectedCard.style.width = `${lerp(REST.w, PARKED.w, p)}%`;
-      selectedCard.style.transform = `translate(-50%, -50%) rotate(${lerp(REST.rot, PARKED.rot, p)}deg)`;
+      selectedCard.style.transform = `translate(-50%, -50%) rotate(${lerp(REST.rot, PARKED.rot, p)}deg) rotateX(var(--card-rx, 0deg)) rotateY(var(--card-ry, 0deg))`;
     }
 
     // only flush the frame's bottom padding once truly parked — doing

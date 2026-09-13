@@ -1,6 +1,6 @@
-import { initWork } from "./work.js";
-import { initArt } from "./art.js";
-import { initAbout } from "./about.js";
+import { initWork } from "./work.js?v=23";
+import { initArt } from "./art.js?v=20";
+import { initAbout } from "./about.js?v=15";
 
 const tabs = {
   work: document.getElementById("tab-work"),

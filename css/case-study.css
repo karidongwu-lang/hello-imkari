@@ -18,8 +18,16 @@
 }
 
 .prv-page h1, .prv-page h2, .prv-page h3 {
-  font-family: "EB Garamond", Georgia, serif;
-  font-weight: 400;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.05em;
+}
+
+/* the small colored accent labels (category tag, section numbers, prev/
+   next labels) — Helvetica bold instead of the body's system-ui stack */
+.prv-hero-tag, .prv-section-num, .prv-project-nav-label {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-weight: 700;
 }
 
 /* ── Sidebar (section jump-links) ── */
@@ -52,7 +60,8 @@
   white-space: nowrap;
   color: #c8cdd9;
   font-size: 13px;
-  font-family: "Andale Mono", "Courier New", monospace;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  text-transform: lowercase;
   padding: 2px 0;
   transition: color 0.15s;
 }
@@ -162,7 +171,8 @@
   color: var(--cs-accent);
 }
 .prv-project-nav-title {
-  font-family: "EB Garamond", Georgia, serif;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-weight: 700;
   font-size: clamp(1.1rem, 2vw, 1.5rem);
   color: var(--cs-navy);
   transition: color 0.15s;

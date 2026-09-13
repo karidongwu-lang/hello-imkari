@@ -1,3 +1,8 @@
+import { createSketchbook } from "./sketchbook.js?v=7";
+
+const ART_COVER_SRC = "assets/art-cover.JPG";
+const ART_BOOK_PAGE_COUNT = 25;
+
 const ILLUSTRATIONS = [
   "painting copy.webp",
   "headshot copy.webp",
@@ -34,6 +39,44 @@ const SKETCHES = [
   "shoes copy.webp",
 ];
 
+// title/medium/year for the lightbox caption, keyed by a normalized
+// filename so it lines up regardless of the " copy"/"(1)" suffixes or
+// casing our own asset files happen to have. "city" and "Charcoal"
+// have no entry — no metadata exists for those two pieces.
+const ART_META = {
+  painting: { title: "Painting", medium: "Acrylic", year: "2024" },
+  headshot: { title: "Headshot", medium: "Acrylic Paint", year: "2024" },
+  bubbles: { title: "Bubbles", medium: "Procreate on iPad", year: "2021" },
+  crayondigital: { title: "Slice", medium: "Multimedia", year: "2023" },
+  papermixed: { title: "Luck", medium: "Multimedia", year: "2023" },
+  birthday: { title: "Birthday", medium: "Procreate on iPad", year: "2023" },
+  card: { title: "Card", medium: "Procreate on iPad", year: "2026" },
+  chase: { title: "Chase", medium: "Procreate on iPad", year: "2024" },
+  fantasy: { title: "Fantasy", medium: "Mixed Media", year: "2025" },
+  figure: { title: "Figure", medium: "Procreate on iPad", year: "2022" },
+  home: { title: "Crush", medium: "Procreate on iPad", year: "2024" },
+  mothersday: { title: "Mom", medium: "Procreate on iPad", year: "2025" },
+  symbols: { title: "#@*!!", medium: "Procreate on iPad", year: "2023" },
+  acrylic: { title: "Fruits Study", medium: "Acrylic paint", year: "2023" },
+  crayon1: { title: "Profile Study", medium: "Crayon", year: "2023" },
+  graphite: { title: "Garage Floor Study", medium: "Graphite", year: "2024" },
+  nainai: { title: "Nainai", medium: "Procreate on iPad", year: "2025" },
+  reality: { title: "Reality", medium: "Procreate on iPad", year: "2024" },
+  runandlive: { title: "Run and Live", medium: "Public Mural", year: "2024" },
+  self: { title: "Adolescent Inspirations", medium: "Mixed Media", year: "2025" },
+  sf: { title: "San Francisco", medium: "Procreate on iPad", year: "2023" },
+  shoes: { title: "Shoes Study", medium: "Graphite", year: "2023" },
+};
+
+function normalizeKey(name) {
+  return name
+    .replace(/\.webp$/i, "")
+    .replace(/ copy$/i, "")
+    .replace(/\s*\(\d+\)\s*$/, "")
+    .trim()
+    .toLowerCase();
+}
+
 function src(folder, name) {
   return `art/${folder}/${encodeURIComponent(name)}`;
 }
@@ -45,7 +88,19 @@ function label(name) {
 function makeImg(folder, name, alt) {
   const img = document.createElement("img");
   img.src = folder ? src(folder, name) : name;
-  img.alt = alt ?? label(name);
+  const meta = ART_META[normalizeKey(name)];
+  img.alt = alt ?? meta?.title ?? label(name);
+  if (meta) {
+    img.dataset.title = meta.title;
+    img.dataset.medium = meta.medium;
+    img.dataset.year = meta.year;
+  }
+  // the cover's rounded-right-edge styling normally comes from its
+  // .art-cover button wrapper (border-radius + overflow:hidden), but
+  // expandFromStack() moves just the bare <img> out into the grid,
+  // leaving that wrapper behind — so the corner rounding has to live on
+  // the image itself too, or it goes square once it lands in the grid.
+  if (!folder && name === ART_COVER_SRC) img.classList.add("art-cover-thumb");
   return img;
 }
 
@@ -87,12 +142,51 @@ function layoutMasonry(container, images) {
 
 export function initArt() {
   const tab = document.getElementById("tab-art");
+  const artMat = document.getElementById("art-mat");
   const artScatter = document.getElementById("art-scatter");
   const grid = document.getElementById("art-grid");
+  const cta = document.getElementById("art-cta");
+  const logo = document.getElementById("art-logo");
   const subnav = document.getElementById("art-subnav");
   const backBtn = document.getElementById("art-back");
   const lightbox = document.getElementById("art-lightbox");
   const lightboxImg = document.getElementById("art-lightbox-img");
+  const lightboxTitle = document.getElementById("art-lightbox-title");
+  const lightboxMeta = document.getElementById("art-lightbox-meta");
+
+  // 3D pointer-tilt for the scattered cover stack, matching the
+  // sketchbook widget's own tilt (js/sketchbook.js tiltTo/setView) so
+  // the art landing page feels just as interactive as work/about.
+  const TILT_X = 4.5,
+    TILT_Y = 7;
+  function tiltTo(cx, cy) {
+    if (tab.dataset.state !== "cover") return;
+    const r = artMat.getBoundingClientRect();
+    if (!r.width) return;
+    const nx = Math.max(-1, Math.min(1, (cx - (r.left + r.width / 2)) / (r.width * 0.62)));
+    const ny = Math.max(-1, Math.min(1, (cy - (r.top + r.height / 2)) / (r.height * 0.9)));
+    artScatter.style.setProperty("--art-rx", (-ny * TILT_X).toFixed(2) + "deg");
+    artScatter.style.setProperty("--art-ry", (nx * TILT_Y).toFixed(2) + "deg");
+  }
+  function resetTilt() {
+    artScatter.style.setProperty("--art-rx", "0deg");
+    artScatter.style.setProperty("--art-ry", "0deg");
+  }
+  addEventListener(
+    "pointermove",
+    (e) => {
+      if (e.pointerType === "touch") return;
+      tiltTo(e.clientX, e.clientY);
+    },
+    { passive: true }
+  );
+  addEventListener("pointerout", (e) => {
+    if (!e.relatedTarget) resetTilt();
+  });
+
+  logo?.addEventListener("click", () => {
+    document.querySelector('[data-nav-group] .nav-link[data-tab="work"]')?.click();
+  });
 
   function buildStack() {
     artScatter.innerHTML = "";
@@ -106,7 +200,7 @@ export function initArt() {
     coverBtn.className = "art-cover";
     coverBtn.type = "button";
     coverBtn.setAttribute("aria-label", "View all art");
-    coverBtn.appendChild(makeImg(null, "assets/art-cover.png", "Sketchbook cover"));
+    coverBtn.appendChild(makeImg(null, ART_COVER_SRC, "Sketchbook cover"));
     artScatter.appendChild(coverBtn);
     coverBtn.addEventListener("click", expandFromStack);
   }
@@ -119,7 +213,7 @@ export function initArt() {
     const imgs =
       section === "sketches"
         ? SKETCHES.map((name) => makeImg("sketches", name))
-        : [makeImg(null, "assets/art-cover.png", "Sketchbook cover"), ...ILLUSTRATIONS.map((name) => makeImg("illustrations", name))];
+        : [makeImg(null, ART_COVER_SRC, "Sketchbook cover"), ...ILLUSTRATIONS.map((name) => makeImg("illustrations", name))];
     await Promise.all(imgs.map(waitFor));
     layoutMasonry(grid, imgs);
   }
@@ -196,6 +290,7 @@ export function initArt() {
 
     subnav.querySelectorAll(".nav-link").forEach((b) => b.removeAttribute("data-active"));
     subnav.querySelector('[data-sub="illustrations"]').dataset.active = "true";
+    cta.hidden = false;
   }
 
   buildStack();
@@ -204,6 +299,8 @@ export function initArt() {
     window.scrollTo({ top: 0 });
     tab.dataset.state = "cover";
     subnav.hidden = true;
+    cta.hidden = true;
+    resetTilt();
     if (backBtn) backBtn.hidden = true;
     grid.innerHTML = "";
     buildStack();
@@ -216,21 +313,76 @@ export function initArt() {
     if (!btn) return;
     subnav.querySelectorAll(".nav-link").forEach((b) => b.removeAttribute("data-active"));
     btn.dataset.active = "true";
+    cta.hidden = btn.dataset.sub !== "illustrations";
     renderGrid(btn.dataset.sub);
+  });
+
+  cta.addEventListener("click", () => {
+    subnav.querySelectorAll(".nav-link").forEach((b) => b.removeAttribute("data-active"));
+    subnav.querySelector('[data-sub="sketches"]').dataset.active = "true";
+    cta.hidden = true;
+    renderGrid("sketches");
   });
 
   subnav.querySelector('[data-sub="illustrations"]').dataset.active = "true";
 
+  // The sketchbook cover tile opens a real flippable sketchbook instead
+  // of the plain image lightbox — built once (lazily, on first open)
+  // and reused after that, since createSketchbook() attaches its own
+  // window-level listeners and re-running it on the same mount would
+  // stack up duplicates rather than replace them.
+  const bookLightbox = document.getElementById("art-book-lightbox");
+  const bookMount = document.getElementById("art-book-mount");
+  const bookClose = document.getElementById("art-book-close");
+  let artBook = null;
+
+  function openArtBook() {
+    if (!artBook) {
+      artBook = createSketchbook(bookMount, {
+        dir: "assets/sketchbook-art/",
+        pages: Array.from({ length: ART_BOOK_PAGE_COUNT }, (_, i) => ({ file: `page-${i + 1}.png`, title: "", place: "" })),
+        coverFront: "cover-front.png",
+        coverBack: "cover-back.png",
+        v: "12",
+      });
+    } else {
+      artBook.goTo(0);
+    }
+    bookLightbox.classList.add("open");
+  }
+
+  bookClose.addEventListener("click", () => bookLightbox.classList.remove("open"));
+  bookLightbox.addEventListener("click", (e) => {
+    if (e.target === bookLightbox) bookLightbox.classList.remove("open");
+  });
+
   grid.addEventListener("click", (e) => {
     const img = e.target.closest("img");
     if (!img) return;
+    if (img.src.endsWith(ART_COVER_SRC)) {
+      openArtBook();
+      return;
+    }
     lightboxImg.src = img.src;
     lightboxImg.alt = img.alt;
+    lightboxTitle.textContent = img.dataset.title || "";
+    lightboxMeta.textContent = img.dataset.medium && img.dataset.year ? `${img.dataset.medium} · ${img.dataset.year}` : "";
     lightbox.classList.add("open");
   });
 
   lightbox.addEventListener("click", () => {
     lightbox.classList.remove("open");
+  });
+
+  // both lightboxes live outside #tab-art (siblings at the end of
+  // <body>), so switching tabs doesn't hide them on its own — close
+  // them explicitly, especially the sketchbook one since it keeps its
+  // own window-level listeners alive while open
+  document.addEventListener("tabchange", (e) => {
+    if (e.detail.tab !== "art") {
+      lightbox.classList.remove("open");
+      bookLightbox.classList.remove("open");
+    }
   });
 
   return { reset };

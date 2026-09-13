@@ -76,8 +76,8 @@ export function createSketchbook(mount, { dir, pages, coverFront, coverBack, onT
   const N = 18;
   const SPAN = 0.5;
   const BETA = 0.6;
-  const COVER_N = 1;
-  const COVER_BETA = 0;
+  const COVER_N = 18;
+  const COVER_BETA = 0.6;
   let idx = 0,
     turn = null;
   let strips = [];
@@ -465,20 +465,36 @@ export function createSketchbook(mount, { dir, pages, coverFront, coverBack, onT
   prevBtn.onclick = () => step("prev");
   nextBtn.onclick = () => step("next");
 
-  // Robust fallback for "click the closed cover to open it": the primary
-  // path is stage's pointerdown -> hit-test against .sb-zone, but that
-  // hit-test lives inside a nested perspective/preserve-3d/translateZ
-  // transform stack, which some browsers (seen in Chrome, not Safari)
-  // resolve incorrectly for real pointer input even though it visually
-  // renders in the right place. A plain click on the flat, untransformed
-  // mount element doesn't depend on that hit-test at all. Guarded by
-  // `!turn` so it's a no-op if the primary path already handled it (turn
-  // is set synchronously by startTurn, before this click fires).
-  mount.addEventListener("click", () => {
-    if (isClosed(idx) && !turn) {
+  // Robust fallback for turning a page by clicking: the primary path is
+  // stage's pointerdown -> hit-test against .sb-zone, but that hit-test
+  // lives inside a nested perspective/preserve-3d/translateZ transform
+  // stack, which some browsers (seen in Chrome, not Safari) resolve
+  // incorrectly for real pointer input even though it visually renders
+  // in the right place. A plain click on the flat, untransformed mount
+  // element doesn't depend on that hit-test at all. Guarded by `!turn`
+  // so it's a no-op if the primary path already handled it (turn is set
+  // synchronously by startTurn, before this click fires).
+  //
+  // This used to only handle "click the closed cover to open it" (the
+  // only turn a single-page book like work/about's ever needs), which
+  // is exactly why a multi-page book (the art book, 25 real pages) was
+  // the first place a plain click failing to turn INTERIOR pages ever
+  // surfaced — general next/prev needs the same flat fallback, picking
+  // a direction from which half of the mount was clicked, same as
+  // stage's own pointerdown handler does.
+  mount.addEventListener("click", (e) => {
+    if (turn) return;
+    if (isClosed(idx)) {
       hideHint();
       step("next");
+      return;
     }
+    const r = mount.getBoundingClientRect();
+    if (!r.width) return;
+    const dir_ = (e.clientX - r.left) / r.width > 0.5 ? "next" : "prev";
+    if ((dir_ === "next" && idx >= TOTAL - 1) || (dir_ === "prev" && idx <= 0)) return;
+    hideHint();
+    step(dir_);
   });
   addEventListener("keydown", (e) => {
     if (!isVisible()) return;
