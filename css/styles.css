@@ -336,10 +336,33 @@ img { display: block; max-width: 100%; }
   height: auto;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
   transform: translate(-50%, -50%) rotate(var(--r, 0deg));
+  transition: left 0.35s var(--ease), top 0.35s var(--ease), transform 0.35s var(--ease);
 }
 .scatter-img[data-slot="0"] { left: 53.7%; top: 53.2%; --r: 10.28deg; z-index: 1; }
 .scatter-img[data-slot="1"] { left: 53.6%; top: 60.6%; --r: 1.52deg; z-index: 2; }
 .scatter-img[data-slot="2"] { left: 55.5%; top: 62.5%; --r: 1.52deg; z-index: 3; }
+
+/* Hovering the cover or any of the peeking images nudges all three
+   further out from behind the cover, continuing the same direction
+   each is already offset in — a preview hint that clicking spreads
+   them out into the full gallery grid. :has() scopes this to actually
+   hovering the stack itself, not just anywhere in .art-scatter (which
+   is inset:0 over the whole mat). */
+#tab-art[data-state="cover"] .art-scatter:has(.art-cover:hover, .scatter-img:hover) .scatter-img[data-slot="0"] {
+  left: 56%;
+  top: 49%;
+  --r: 12deg;
+}
+#tab-art[data-state="cover"] .art-scatter:has(.art-cover:hover, .scatter-img:hover) .scatter-img[data-slot="1"] {
+  left: 57%;
+  top: 64%;
+  --r: 0deg;
+}
+#tab-art[data-state="cover"] .art-scatter:has(.art-cover:hover, .scatter-img:hover) .scatter-img[data-slot="2"] {
+  left: 60%;
+  top: 68%;
+  --r: 4deg;
+}
 
 .art-cover {
   position: absolute;
@@ -350,8 +373,11 @@ img { display: block; max-width: 100%; }
   z-index: 4;
   box-shadow: inset 4px 6px 3px rgba(255, 255, 255, 0.3), inset -7px -8px 4px rgba(0, 0, 0, 0.25), 0 6px 18px rgba(0, 0, 0, 0.4);
   /* matches the notebook-spine convention used elsewhere (sb-full in
-     css/sketchbook.css): only the outer/right edge is rounded */
-  border-radius: 0 1.8% 1.8% 0;
+     css/sketchbook.css): only the outer/right edge is rounded. Doubled
+     alongside the flip-book cover's own baked-in radius (26px -> 52px)
+     so this pre-click preview reads as consistently rounded as the
+     enlarged view it leads into. */
+  border-radius: 0 3.6% 3.6% 0;
   overflow: hidden;
   transition: transform 0.6s var(--ease);
 }
@@ -360,7 +386,7 @@ img { display: block; max-width: 100%; }
 /* the cover keeps this same rounding once it's moved into the grid as
    a bare <img> (see makeImg() in js/art.js) — that move leaves the
    .art-cover wrapper (and its border-radius) behind */
-.art-cover-thumb { border-radius: 0 1.8% 1.8% 0; }
+.art-cover-thumb { border-radius: 0 3.6% 3.6% 0; }
 
 /* normal document flow (not absolute) so its real content height makes
    the page scrollable while the background stays fixed behind it — see
