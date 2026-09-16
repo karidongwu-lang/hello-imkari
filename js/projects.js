@@ -31,7 +31,10 @@ window.PROJECTS = [
           label: 'Research Insights',
           heading: 'What we heard from clinic staff',
           text:
-            'Staff need to know what is missing before they submit.\n\nPayer requirements vary and are difficult to track.\n\nCopying information across documents and forms creates repetitive work.\n\nStaff need confidence before submitting because mistakes can delay care.'
+            'Staff need to know what is missing before they submit.\n\nPayer requirements vary and are difficult to track.\n\nCopying information across documents and forms creates repetitive work.\n\nStaff need confidence before submitting because mistakes can delay care.',
+          images: [
+            { src: 'preva/workflow-map.webp', caption: 'The current prior authorization workflow — eight manual steps clinic staff repeat for every case' }
+          ]
         },
         {
           label: 'Design Challenge',
@@ -43,7 +46,10 @@ window.PROJECTS = [
           label: 'Key UX Shift',
           heading: 'The UX challenge is designing a trustworthy delegation experience',
           text:
-            'The challenge is not just making each step easy. It is: how do you design an experience where staff feel confident handing work off to an AI agent?\n\nAgentic AI UI should help users delegate repetitive steps, supervise the agent, review uncertain outputs, and approve high-impact actions.'
+            'The challenge is not just making each step easy. It is: how do you design an experience where staff feel confident handing work off to an AI agent?\n\nAgentic AI UI should help users delegate repetitive steps, supervise the agent, review uncertain outputs, and approve high-impact actions.',
+          images: [
+            { src: 'preva/agentic-flow.webp', caption: 'How Preva turns an eight-step manual process into a guided human-AI loop' }
+          ]
         },
         {
           label: 'Responsibility & Risk',
@@ -52,14 +58,22 @@ window.PROJECTS = [
             'The AI should not handle everything automatically, especially in healthcare-adjacent workflows. I mapped the process into human-owned, agent-owned, and shared responsibilities. Because prior authorization affects care access and insurance approval, the agent is responsible for extraction, checking, drafting, and tracking — while final decisions and submissions stay under human control.\n\nLow-risk tasks (summarize, organize, classify, suggest): the agent acts automatically. Medium-risk tasks (draft, pre-fill, recommend): staff review and decide. High-risk tasks (submit, send, delete, approve, diagnose, reject): staff must explicitly approve.',
           layout: 'row',
           images: [
-            { src: 'images/work/UI projects/Preva/agentflow.webp', caption: 'Agentic authorization flow — human vs. agent responsibility by risk level' }
+            { src: 'preva/responsibility-matrix.webp', caption: 'What Preva handles automatically vs. what stays in human hands' }
           ]
         },
         {
           label: 'Final Design',
           heading: 'Redesigning the agentic AI experience around delegation, review, and trust',
           text:
-            'The workflow covers five key screens, from the morning dashboard to post-submission tracking.\n\nDashboard — the agent pre-sorts work by urgency, so staff know exactly what to do without hunting or filtering.\n\nCase Detail — all patient, auth, and AI context in one place before staff touch anything, with an AI case summary of what the agent already understands.\n\nReview Draft Packet — the most important screen, where trust is built or broken: the AI shows its work (confidence scores, source evidence, flagged conflicts) and staff decide. Every editable field has a dashed underline; every flag has a resolution path.\n\nPost-Submission Tracking — the agent\'s job doesn\'t end at submission. One focused screen answers one question: where is it?\n\nActivity Log — the trust layer. Every agent action is logged, timestamped, and attributed, so staff, managers, and compliance teams can always answer what the AI did, and why.'
+            'The workflow covers five key screens, from the morning dashboard to post-submission tracking.\n\nDashboard — the agent pre-sorts work by urgency, so staff know exactly what to do without hunting or filtering.\n\nCase Detail — all patient, auth, and AI context in one place before staff touch anything, with an AI case summary of what the agent already understands.\n\nReview Draft Packet — the most important screen, where trust is built or broken: the AI shows its work (confidence scores, source evidence, flagged conflicts) and staff decide. Every editable field has a dashed underline; every flag has a resolution path.\n\nPost-Submission Tracking — the agent\'s job doesn\'t end at submission. One focused screen answers one question: where is it?\n\nActivity Log — the trust layer. Every agent action is logged, timestamped, and attributed, so staff, managers, and compliance teams can always answer what the AI did, and why.',
+          layout: 'row',
+          images: [
+            { src: 'preva/dashboard.webp', caption: 'Dashboard — the agent pre-sorts work by urgency' },
+            { src: 'preva/case-detail.webp', caption: 'Case Detail — patient, auth, and AI context in one place' },
+            { src: 'preva/review-draft.webp', caption: 'Review Draft Packet — where trust is built or broken' },
+            { src: 'preva/post-submission.webp', caption: 'Post-Submission Tracking — one screen, one question: where is it?' },
+            { src: 'preva/activity-log.webp', caption: 'Activity Log — every agent action logged, timestamped, and attributed' }
+          ]
         }
       ],
       takeaways:
