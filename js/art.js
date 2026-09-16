@@ -12,7 +12,6 @@ const ILLUSTRATIONS = [
   "birthday copy.webp",
   "card copy.webp",
   "chase copy.webp",
-  "city copy.webp",
   "fantasy copy.webp",
   "figure copy.webp",
   "home copy.webp",
@@ -28,7 +27,6 @@ const COLUMNS = 3;
 
 const SKETCHES = [
   "Acrylic copy.webp",
-  "Charcoal copy.webp",
   "Crayon1 (1) copy.webp",
   "Graphite copy.webp",
   "nainai copy.webp",
@@ -41,8 +39,10 @@ const SKETCHES = [
 
 // title/medium/year for the lightbox caption, keyed by a normalized
 // filename so it lines up regardless of the " copy"/"(1)" suffixes or
-// casing our own asset files happen to have. "city" and "Charcoal"
-// have no entry — no metadata exists for those two pieces.
+// casing our own asset files happen to have. ("city" and "Charcoal"
+// used to be in ILLUSTRATIONS/SKETCHES above with no entry here — no
+// metadata existed for those two, so they were dropped from the grids
+// entirely rather than showing a blank caption.)
 const ART_META = {
   painting: { title: "Painting", medium: "Acrylic", year: "2024" },
   headshot: { title: "Headshot", medium: "Acrylic Paint", year: "2024" },
@@ -79,6 +79,22 @@ function normalizeKey(name) {
 
 function src(folder, name) {
   return `art/${folder}/${encodeURIComponent(name)}`;
+}
+
+// Fires the actual byte fetch immediately, without creating any DOM
+// (an Image() object never inserted anywhere still triggers and caches
+// the request) — so by the time a real <img> or the flip-book widget
+// asks for the same URL later, the browser already has it and there's
+// no visible load-in delay. Deliberately NOT instantiating the art
+// flip-book widget itself here (see openArtBook() below) — only
+// prefetching its bytes — since createSketchbook() attaches live
+// window-level pointermove/keydown listeners keyed off the mount's
+// offsetParent, and .art-book-lightbox only hides via opacity (not
+// display:none), so an eagerly-created instance would think it's
+// visible the whole time the site is open.
+function preloadImage(url) {
+  const im = new Image();
+  im.src = url;
 }
 
 function label(name) {
@@ -140,7 +156,38 @@ function layoutMasonry(container, images) {
   });
 }
 
+// The illustrations/sketches grids and the 25-page flip-book are all
+// built lazily (only once the visitor actually expands the stack,
+// switches sub-nav, or opens the book) so the DOM/layout work doesn't
+// happen before it's needed — but that also meant the corresponding
+// IMAGE BYTES weren't even requested until that exact moment, so the
+// first expand/switch/open always had a visible load-in stall. Kicking
+// off every request right away means they're already sitting in the
+// browser's cache by the time any of those lazy build steps actually
+// run — but "right away" is deliberately AFTER the browser's gone
+// idle (below), not at the same instant as page load: this tab isn't
+// the default landing view, so firing 40+ requests for it at the very
+// same tick as the (visible, above-the-fold) work tab's own cover
+// image/notecards just made everything compete for the same handful
+// of concurrent connections, slowing down the part actually on screen
+// first. Deferring these lets the critical, visible content win that
+// race, while still getting everything else loaded in the background
+// well before a visitor would actually click into the art tab.
+function preloadArtAssets() {
+  ILLUSTRATIONS.forEach((name) => preloadImage(src("illustrations", name)));
+  SKETCHES.forEach((name) => preloadImage(src("sketches", name)));
+  const bookDir = "assets/sketchbook-art/";
+  preloadImage(bookDir + "cover-front.webp");
+  preloadImage(bookDir + "cover-back.webp");
+  for (let i = 1; i <= ART_BOOK_PAGE_COUNT; i++) preloadImage(`${bookDir}page-${i}.jpg`);
+}
+
 export function initArt() {
+  if ("requestIdleCallback" in window) {
+    requestIdleCallback(preloadArtAssets, { timeout: 2000 });
+  } else {
+    setTimeout(preloadArtAssets, 300);
+  }
   const tab = document.getElementById("tab-art");
   const artMat = document.getElementById("art-mat");
   const artScatter = document.getElementById("art-scatter");
@@ -314,13 +361,20 @@ export function initArt() {
     subnav.querySelectorAll(".nav-link").forEach((b) => b.removeAttribute("data-active"));
     btn.dataset.active = "true";
     cta.hidden = btn.dataset.sub !== "illustrations";
+    window.scrollTo({ top: 0 });
     renderGrid(btn.dataset.sub);
   });
 
+  // the CTA sits down near the bottom of the (often long, scrolled-down)
+  // illustrations grid, so switching sections without also resetting
+  // scroll landed visitors mid-way down the sketches grid instead of at
+  // its top — same fix as the sub-nav click above, just for this
+  // second entry point into the same section switch.
   cta.addEventListener("click", () => {
     subnav.querySelectorAll(".nav-link").forEach((b) => b.removeAttribute("data-active"));
     subnav.querySelector('[data-sub="sketches"]').dataset.active = "true";
     cta.hidden = true;
+    window.scrollTo({ top: 0 });
     renderGrid("sketches");
   });
 
@@ -340,10 +394,10 @@ export function initArt() {
     if (!artBook) {
       artBook = createSketchbook(bookMount, {
         dir: "assets/sketchbook-art/",
-        pages: Array.from({ length: ART_BOOK_PAGE_COUNT }, (_, i) => ({ file: `page-${i + 1}.png`, title: "", place: "" })),
-        coverFront: "cover-front.png",
-        coverBack: "cover-back.png",
-        v: "12",
+        pages: Array.from({ length: ART_BOOK_PAGE_COUNT }, (_, i) => ({ file: `page-${i + 1}.jpg`, title: "", place: "" })),
+        coverFront: "cover-front.webp",
+        coverBack: "cover-back.webp",
+        v: "13",
       });
     } else {
       artBook.goTo(0);
@@ -356,6 +410,29 @@ export function initArt() {
     if (e.target === bookLightbox) bookLightbox.classList.remove("open");
   });
 
+  // Lets the lightbox step to the next/previous piece without closing
+  // and reopening — the sketchbook cover tile is excluded since it
+  // opens a different overlay entirely (openArtBook), not this one.
+  const lightboxPrev = document.getElementById("art-lightbox-prev");
+  const lightboxNext = document.getElementById("art-lightbox-next");
+  const lightboxCloseBtn = document.getElementById("art-lightbox-close");
+  let lightboxIndex = -1;
+  function galleryImages() {
+    return Array.from(grid.querySelectorAll("img")).filter((img) => !img.src.endsWith(ART_COVER_SRC));
+  }
+  function applyLightboxImg(img) {
+    lightboxImg.src = img.src;
+    lightboxImg.alt = img.alt;
+    lightboxTitle.textContent = img.dataset.title || "";
+    lightboxMeta.textContent = img.dataset.medium && img.dataset.year ? `${img.dataset.medium} · ${img.dataset.year}` : "";
+  }
+  function stepLightbox(dir) {
+    const imgs = galleryImages();
+    if (!imgs.length || lightboxIndex < 0) return;
+    lightboxIndex = (lightboxIndex + dir + imgs.length) % imgs.length;
+    applyLightboxImg(imgs[lightboxIndex]);
+  }
+
   grid.addEventListener("click", (e) => {
     const img = e.target.closest("img");
     if (!img) return;
@@ -363,14 +440,22 @@ export function initArt() {
       openArtBook();
       return;
     }
-    lightboxImg.src = img.src;
-    lightboxImg.alt = img.alt;
-    lightboxTitle.textContent = img.dataset.title || "";
-    lightboxMeta.textContent = img.dataset.medium && img.dataset.year ? `${img.dataset.medium} · ${img.dataset.year}` : "";
+    lightboxIndex = galleryImages().indexOf(img);
+    applyLightboxImg(img);
     lightbox.classList.add("open");
   });
 
-  lightbox.addEventListener("click", () => {
+  lightboxPrev.addEventListener("click", () => stepLightbox(-1));
+  lightboxNext.addEventListener("click", () => stepLightbox(1));
+  lightboxCloseBtn.addEventListener("click", () => lightbox.classList.remove("open"));
+  addEventListener("keydown", (e) => {
+    if (!lightbox.classList.contains("open")) return;
+    if (e.key === "ArrowRight") stepLightbox(1);
+    else if (e.key === "ArrowLeft") stepLightbox(-1);
+  });
+
+  lightbox.addEventListener("click", (e) => {
+    if (e.target.closest(".art-lightbox-arrow, #art-lightbox-close")) return;
     lightbox.classList.remove("open");
   });
 

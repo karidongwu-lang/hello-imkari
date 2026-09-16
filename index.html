@@ -4,9 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Kari Wu</title>
-<link rel="stylesheet" href="css/styles.css?v=51">
+<link rel="stylesheet" href="css/styles.css?v=79">
 <link rel="stylesheet" href="css/sketchbook.css?v=29">
 <link rel="stylesheet" href="css/case-study.css?v=7">
+<!-- hints for the handful of assets visible the instant the page paints
+     (default landing tab is Work) — gets the browser fetching these
+     before it's even finished parsing the CSS/JS that would otherwise
+     be what first reveals they're needed at all -->
+<link rel="preload" as="image" href="cuttingmat.svg">
+<link rel="preload" as="image" href="assets/sketchbook-work/cover-front.webp">
 </head>
 <body>
 
@@ -105,10 +111,10 @@
         <button class="polaroid-trigger" id="polaroid-trigger" type="button" aria-label="View photos"></button>
 
         <div class="polaroids" id="polaroids">
-          <img class="polaroid" data-i="0" src="about/poloraid1.png" alt="Polaroid: i love the metro">
-          <img class="polaroid" data-i="1" src="about/poloraid2.png" alt="Polaroid">
-          <img class="polaroid" data-i="2" src="about/poloraid3.png" alt="Polaroid">
-          <img class="polaroid" data-i="3" src="about/poloraid4.png" alt="Polaroid">
+          <img class="polaroid" data-i="0" src="about/poloraid1.webp" alt="Polaroid: i love the metro">
+          <img class="polaroid" data-i="1" src="about/poloraid2.webp" alt="Polaroid">
+          <img class="polaroid" data-i="2" src="about/poloraid3.webp" alt="Polaroid">
+          <img class="polaroid" data-i="3" src="about/poloraid4.webp" alt="Polaroid">
         </div>
 
         <button class="back-btn" id="about-back" type="button" hidden>(back)</button>
@@ -125,6 +131,13 @@
 </main>
 
 <div class="art-lightbox" id="art-lightbox">
+  <button class="art-book-lightbox-close" id="art-lightbox-close" type="button" aria-label="Close">&times;</button>
+  <button class="art-lightbox-arrow left" id="art-lightbox-prev" type="button" aria-label="Previous artwork">
+    <svg viewBox="0 0 14 44" width="18" height="56" fill="none" aria-hidden="true"><polyline points="11,3 3,22 11,41" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
+  <button class="art-lightbox-arrow right" id="art-lightbox-next" type="button" aria-label="Next artwork">
+    <svg viewBox="0 0 14 44" width="18" height="56" fill="none" aria-hidden="true"><polyline points="3,3 11,22 3,41" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
   <div class="art-lightbox-frame">
     <img id="art-lightbox-img" src="" alt="">
     <div class="art-lightbox-caption">
@@ -141,7 +154,7 @@
   </div>
 </div>
 
-<script src="js/projects.js?v=1"></script>
-<script src="js/main.js?v=56" type="module"></script>
+<script src="js/projects.js?v=2"></script>
+<script src="js/main.js?v=66" type="module"></script>
 </body>
 </html>

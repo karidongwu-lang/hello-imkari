@@ -10,7 +10,8 @@ window.PROJECTS = [
     category: 'ui-projects',
     year: '2026',
     duration: 'Ongoing',
-    blurb: 'Automating prior authorization workflows for physical therapy clinics.',
+    blurb:
+      'Preva is a supervised agentic AI prior authorization assistant for physical therapy clinics. It helps clinic staff prepare, review, submit, and track prior authorization requests by automating repetitive administrative work while keeping humans in control of final decisions.',
     featured: true,
     role: 'Designer & Co-Founder',
     timeline: '12 weeks',
@@ -20,30 +21,49 @@ window.PROJECTS = [
     heroImage:      'images/work/UI projects/Preva/prevabanner.webp',
     demoVideo:      'images/work/UI projects/Preva/prevademo.mp4',
     sections: {
-      context:
-        '12-week incubator, founding team of two.\n\nBuilt during an 12-week incubator program as a founding team of two co-founders. Conducted extensive customer discovery before landing on physical therapy clinics as our space.',
       problem:
-        'Insurance paperwork is killing PT clinics.\n\nPrior authorization — a mandatory insurance form for PT clinics — takes 20 hours/week of manual work per clinic. The burden is severe enough that 57% of PT clinics have dropped at least one insurance network entirely, turning away patients like my co-founder\'s friend Navin, who waited 4 extra weeks to begin ACL recovery.',
+        'Prior authorization is a time-consuming workflow.\n\nThe process involves insurance rules, patient documentation, form preparation, submission, and follow-up. Clinic staff spend hours searching across documents, checking payer requirements, and manually tracking incomplete cases.',
       solution:
-        'A browser agent that handles prior auth end-to-end, without any manual steps.\n\nPreva automates prior authorization end-to-end. A browser agent pulls clinical data from any EMR, flags missing information, works with the therapist to resolve gaps, and submits directly to insurance portals — no manual steps, no integrations required.',
-      process: {
-        text:
-          'Discovery → validation → pilot.\n\nCustomer discovery → identified prior auth as the core pain point → validated with clinic owners → built browser-agent architecture to avoid lengthy EMR integration → launched first pilot with Vargo Physical Therapy, with 4 partner clinics and 37 PTs onboarded.',
-        layout: 'row',
-        images: [
-          { src: 'images/work/UI projects/Preva/clinicflow.webp' },
-          { src: 'images/work/UI projects/Preva/agentflow.webp' }
-        ]
-      },
-      results: [
-        { image: 'https://placehold.co/400x300/FAF8F3/1A1A18?text=Tracking', title: 'Automated Tracking', caption: 'Automated visit tracking and reauthorization triggers.' },
-        { image: 'https://placehold.co/400x300/FAF8F3/1A1A18?text=Integrations', title: 'Universal Integrations', caption: 'EMR + insurance portal integrations via browser agents.' },
-        { image: 'https://placehold.co/400x300/FAF8F3/1A1A18?text=Resolution', title: 'Smart Gap Resolution', caption: 'Gap resolution with therapists, and tiered pricing ($350–$899/mo).' }
+        'From manual authorization to supervised automation.\n\nInstead of designing Preva as a traditional form-filling tool, I explored how an AI agent could move clinic staff from manual authorization work to supervised automation. The agent extracts patient and insurance information, identifies missing requirements, drafts the authorization packet, and asks for human approval before submission. My UX focus was the trust layer: plan preview, confidence states, missing-information alerts, review checkpoints, and an activity log.',
+      process: { text: '', images: [] },
+      customSections: [
+        {
+          label: 'Research Insights',
+          heading: 'What we heard from clinic staff',
+          text:
+            'Staff need to know what is missing before they submit.\n\nPayer requirements vary and are difficult to track.\n\nCopying information across documents and forms creates repetitive work.\n\nStaff need confidence before submitting because mistakes can delay care.'
+        },
+        {
+          label: 'Design Challenge',
+          heading: 'How might we design a smarter authorization workflow?',
+          text:
+            'How might we design an AI agent that reduces repetitive prior authorization work while keeping clinic staff informed, confident, and in control?'
+        },
+        {
+          label: 'Key UX Shift',
+          heading: 'The UX challenge is designing a trustworthy delegation experience',
+          text:
+            'The challenge is not just making each step easy. It is: how do you design an experience where staff feel confident handing work off to an AI agent?\n\nAgentic AI UI should help users delegate repetitive steps, supervise the agent, review uncertain outputs, and approve high-impact actions.'
+        },
+        {
+          label: 'Responsibility & Risk',
+          heading: 'Deciding what the agent should — and shouldn\'t — do',
+          text:
+            'The AI should not handle everything automatically, especially in healthcare-adjacent workflows. I mapped the process into human-owned, agent-owned, and shared responsibilities. Because prior authorization affects care access and insurance approval, the agent is responsible for extraction, checking, drafting, and tracking — while final decisions and submissions stay under human control.\n\nLow-risk tasks (summarize, organize, classify, suggest): the agent acts automatically. Medium-risk tasks (draft, pre-fill, recommend): staff review and decide. High-risk tasks (submit, send, delete, approve, diagnose, reject): staff must explicitly approve.',
+          layout: 'row',
+          images: [
+            { src: 'images/work/UI projects/Preva/agentflow.webp', caption: 'Agentic authorization flow — human vs. agent responsibility by risk level' }
+          ]
+        },
+        {
+          label: 'Final Design',
+          heading: 'Redesigning the agentic AI experience around delegation, review, and trust',
+          text:
+            'The workflow covers five key screens, from the morning dashboard to post-submission tracking.\n\nDashboard — the agent pre-sorts work by urgency, so staff know exactly what to do without hunting or filtering.\n\nCase Detail — all patient, auth, and AI context in one place before staff touch anything, with an AI case summary of what the agent already understands.\n\nReview Draft Packet — the most important screen, where trust is built or broken: the AI shows its work (confidence scores, source evidence, flagged conflicts) and staff decide. Every editable field has a dashed underline; every flag has a resolution path.\n\nPost-Submission Tracking — the agent\'s job doesn\'t end at submission. One focused screen answers one question: where is it?\n\nActivity Log — the trust layer. Every agent action is logged, timestamped, and attributed, so staff, managers, and compliance teams can always answer what the AI did, and why.'
+        }
       ],
       takeaways:
-        'Designing for async, agent-driven workflows required rethinking visibility and failure states from the ground up.\n\nDesigning for a browser-agent workflow introduced constraints I hadn\'t encountered before. Unlike typical SaaS products, Preva\'s core actions happen asynchronously in the background — which forced me to rethink how to surface status, progress, and errors to users who aren\'t watching the agent work in real time. A lot of my early wireframes assumed too much user visibility into the process, and I had to strip those back significantly.\n\nThe other challenge was designing around incomplete data. Because the agent sometimes hits missing clinical information mid-submission, I had to map out every failure state and design an interruption flow that pulled the therapist in at exactly the right moment — specific enough to be actionable, without overwhelming someone mid-session with a patient. Getting that interaction right required diagramming the full agent decision tree before touching any UI.',
-      takeawayImage: 'images/work/UI projects/Preva/newdemo.webp',
-      takeawayImageCaption: 'shoutout to my co-founder marcus'
+        'Designing for agentic AI means designing for trust.\n\nThis project clarified something important: designing for agentic AI is not about hiding the interface or replacing every human action. It is about building a trustworthy partnership — where the AI handles repetitive work and the human supervises decisions, exceptions, and approvals.\n\nGoing forward, I want to design human-AI interaction as a feedback loop — where staff corrections and approvals flow back into the system and make it more accurate over time.'
     }
   },
 

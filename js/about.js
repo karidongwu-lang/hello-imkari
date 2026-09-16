@@ -27,10 +27,10 @@ export function initAbout() {
 
   const book = createSketchbook(mount, {
     dir: "assets/sketchbook-about/",
-    pages: [{ file: "page-1.png", title: "", place: "" }],
-    coverFront: "cover-front.png",
-    coverBack: "cover-back.png",
-    v: "21",
+    pages: [{ file: "page-1.jpg", title: "", place: "" }],
+    coverFront: "cover-front.webp",
+    coverBack: "cover-back.webp",
+    v: "22",
     onToggle(isOpen) {
       tab.dataset.state = isOpen ? "open" : "closed";
       if (backBtn) backBtn.hidden = !isOpen;

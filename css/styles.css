@@ -425,14 +425,23 @@ img { display: block; max-width: 100%; }
   width: 100%;
   height: auto;
   display: block;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
   cursor: zoom-in;
-  transition: transform 0.3s var(--ease), box-shadow 0.3s var(--ease);
+  /* filter:drop-shadow instead of box-shadow — box-shadow has to be
+     repainted on the CPU every frame of the transition, and that cost
+     scales with the image's ON-SCREEN area, so taller images (more
+     rendered pixels for the shadow to cover) visibly stuttered while
+     small ones didn't, even after capping every source image to the
+     same resolution. drop-shadow can ride along on the same GPU layer
+     as the transform instead, so the cost stops depending on how big
+     the image is currently rendered at. */
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.3));
+  transition: transform 0.3s var(--ease), filter 0.3s var(--ease);
+  will-change: transform;
 }
 
 .art-grid img:hover {
   transform: scale(1.04);
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.4);
+  filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.4));
 }
 
 /* ---------- lightbox: click a gallery image to enlarge ---------- */
@@ -483,6 +492,27 @@ img { display: block; max-width: 100%; }
 }
 .art-lightbox-meta:empty { display: none; }
 
+/* prev/next between grid artworks, styled like the sketchbook engine's
+   own .sb-arrow chevrons (same polyline/stroke) so the two lightboxes'
+   navigation reads as one consistent pattern, just pinned to the
+   viewport edges here instead of flanking the book inline. */
+.art-lightbox-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 0;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.55);
+  cursor: pointer;
+  padding: 12px;
+  transition: color 0.2s;
+  z-index: 2;
+}
+.art-lightbox-arrow:hover { color: #fff; }
+.art-lightbox-arrow:disabled { opacity: 0.25; cursor: default; }
+.art-lightbox-arrow.left { left: 2vw; }
+.art-lightbox-arrow.right { right: 2vw; }
+
 /* ---------- flippable sketchbook overlay for the "sketchbook" grid
    tile — big and centered like the plain lightbox, but hosts the same
    flipbook widget the landing pages use instead of a static image ---------- */
@@ -510,7 +540,20 @@ img { display: block; max-width: 100%; }
   top: auto;
   width: 100%;
   aspect-ratio: 1760 / 1240;
+  /* .sb-arrow's color comes from these (sketchbook.css), tuned for the
+     light cutting-mat background elsewhere — against this lightbox's
+     dark overlay they'd be nearly invisible, so lighten them just for
+     this instance. */
+  --ink: #fff;
+  --ink-soft: rgba(255, 255, 255, 0.75);
+  --ink-faint: rgba(255, 255, 255, 0.45);
 }
+/* Page-turn navigation here should only ever be an explicit chevron
+   click — .sb-arrow is hidden site-wide (below) since work/about's
+   single-spread books have nothing to page through, but the art book's
+   real 25 pages make a visible prev/next actually useful. Needs
+   !important to outrank that site-wide rule, which also uses it. */
+#art-book-lightbox .sb-arrow { display: inline-flex !important; }
 .art-book-lightbox-close {
   position: absolute;
   top: 24px;
@@ -544,7 +587,7 @@ img { display: block; max-width: 100%; }
   position: relative;
   z-index: 2;
   display: block;
-  margin: -4vh auto 8vh;
+  margin: -6vh auto 8vh;
   font-size: 1.1rem;
   font-weight: 700;
   letter-spacing: -0.02em;

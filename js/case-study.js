@@ -151,7 +151,14 @@ export function renderCaseStudy(mainEl, sidebarEl, p) {
           `<section id="${id}" class="prv-section">` +
           '<div class="prv-container">' +
           `<div class="prv-section-num">${String(num++).padStart(2, "0")} — ${esc(cs.label)}</div>` +
-          `<h2>${esc(cs.label)}</h2>` +
+          // heading defaults to the sidebar label when a section has
+          // nothing more specific to say (every prior customSection),
+          // but can differ from it (e.g. a punchier heading vs. a short
+          // sidebar label) — same pattern already used for problem/
+          // solution/process, whose headings are their own first
+          // sentence rather than their (shorter) sidebar label
+          `<h2>${esc(cs.heading || cs.label)}</h2>` +
+          (cs.text ? paras(cs.text) : "") +
           imgHTML +
           "</div>" +
           "</section>";

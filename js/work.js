@@ -1,6 +1,6 @@
 import { lerp, clamp } from "./util.js?v=1";
 import { createSketchbook } from "./sketchbook.js?v=7";
-import { renderCaseStudy } from "./case-study.js?v=3";
+import { renderCaseStudy } from "./case-study.js?v=4";
 
 // Percentages are relative to the full .mat box.
 const REST = { cx: 50, cy: 56, w: 22, rot: 0 };
@@ -32,10 +32,10 @@ export function initWork() {
 
   const book = createSketchbook(mount, {
     dir: "assets/sketchbook-work/",
-    pages: [{ file: "page-1.png", title: "", place: "" }],
-    coverFront: "cover-front.png",
-    coverBack: "cover-back.png",
-    v: "16",
+    pages: [{ file: "page-1.jpg", title: "", place: "" }],
+    coverFront: "cover-front.webp",
+    coverBack: "cover-back.webp",
+    v: "17",
     onToggle(isOpen) {
       bookOpen = isOpen;
       tab.dataset.state = selectedCard ? "selected" : isOpen ? "open" : "closed";
