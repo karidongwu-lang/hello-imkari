@@ -27,7 +27,7 @@ export function initAbout() {
 
   const book = createSketchbook(mount, {
     dir: "assets/sketchbook-about/",
-    pages: [{ file: "page-1.jpg", title: "", place: "" }],
+    pages: [{ file: "page-1.webp", title: "", place: "" }],
     coverFront: "cover-front.webp",
     coverBack: "cover-back.webp",
     v: "22",

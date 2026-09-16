@@ -179,7 +179,7 @@ function preloadArtAssets() {
   const bookDir = "assets/sketchbook-art/";
   preloadImage(bookDir + "cover-front.webp");
   preloadImage(bookDir + "cover-back.webp");
-  for (let i = 1; i <= ART_BOOK_PAGE_COUNT; i++) preloadImage(`${bookDir}page-${i}.jpg`);
+  for (let i = 1; i <= ART_BOOK_PAGE_COUNT; i++) preloadImage(`${bookDir}page-${i}.webp`);
 }
 
 export function initArt() {
@@ -394,7 +394,7 @@ export function initArt() {
     if (!artBook) {
       artBook = createSketchbook(bookMount, {
         dir: "assets/sketchbook-art/",
-        pages: Array.from({ length: ART_BOOK_PAGE_COUNT }, (_, i) => ({ file: `page-${i + 1}.jpg`, title: "", place: "" })),
+        pages: Array.from({ length: ART_BOOK_PAGE_COUNT }, (_, i) => ({ file: `page-${i + 1}.webp`, title: "", place: "" })),
         coverFront: "cover-front.webp",
         coverBack: "cover-back.webp",
         v: "13",
