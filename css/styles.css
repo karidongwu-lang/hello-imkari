@@ -293,6 +293,36 @@ img { display: block; max-width: 100%; }
   z-index: 6;
 }
 
+/* Prev/next-project swap (js/work.js's goToProject) — instead of the
+   outgoing and incoming notecards just appearing/disappearing in place
+   at the parked corner, the outgoing one flies out past the left edge
+   and the incoming one drops in from off-screen above. --enter-top
+   forces a clean, transition-disabled starting position regardless of
+   whatever stale inline left/top/transform the card might be carrying
+   from an earlier selection, so every entrance starts from the same
+   spot; removing the class (next frame, after applyScroll has set the
+   real parked position) is what makes it animate down into place.
+   --exit-left forces its own transition so the animate-away happens
+   even if the card's inline transition was last set to "none" (true
+   mid-scroll, not here, but kept explicit rather than assumed). Both
+   use !important to win over .notecard--dropped, which selectProject()
+   adds to the outgoing card at the same time — dropped's own (different)
+   hidden position only takes over once --exit-left is removed, by which
+   point the card is already invisible, so the handoff itself is unseen. */
+.notecard--enter-top {
+  left: 50% !important;
+  top: -22% !important;
+  transform: translate(-50%, -50%) rotate(6deg) !important;
+  opacity: 0 !important;
+  transition: none !important;
+}
+.notecard--exit-left {
+  left: -30% !important;
+  transform: translate(-50%, -50%) rotate(-18deg) !important;
+  opacity: 0 !important;
+  transition: left 0.5s var(--ease), transform 0.5s var(--ease), opacity 0.4s var(--ease) !important;
+}
+
 /* =========================================================
    ART TAB
    ========================================================= */

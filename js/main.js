@@ -1,4 +1,4 @@
-import { initWork } from "./work.js?v=25";
+import { initWork } from "./work.js?v=33";
 import { initArt } from "./art.js?v=26";
 import { initAbout } from "./about.js?v=17";
 

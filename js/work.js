@@ -15,6 +15,26 @@ function stuckStripPx() {
   return window.innerHeight * STUCK_STRIP_VH;
 }
 
+// The native `behavior: "smooth"` scroll has no duration knob — it's
+// whatever the browser decides, which reads as fairly quick for the
+// book→project-page transition. This is a plain rAF tween instead, so
+// the pace of that specific transition can actually be tuned.
+function smoothScrollTo(top, duration = 900) {
+  const startY = window.scrollY;
+  const delta = top - startY;
+  const startTime = performance.now();
+  function ease(t) {
+    // easeInOutQuad
+    return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+  }
+  function step(now) {
+    const t = Math.min(1, (now - startTime) / duration);
+    window.scrollTo(0, startY + delta * ease(t));
+    if (t < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
 export function initWork() {
   const tab = document.getElementById("tab-work");
   const matFrame = document.getElementById("work-hero");
@@ -77,6 +97,34 @@ export function initWork() {
     if (!e.relatedTarget) resetTilt(selectedCard);
   });
 
+  // Once parked in the corner (scrolled deep into a case study), the
+  // selected card is a small, easy-to-miss UI element — hovering it
+  // enlarges it slightly so it reads as clickable (not just decorative),
+  // matching the "click it to go back to the index" behavior wired up
+  // below. Delegated pointerover/pointerout (checking e.target directly)
+  // rather than anything getBoundingClientRect-based: this card carries
+  // a 3D rotate/rotateX/rotateY transform inside a perspective context,
+  // and a rect-based hover/tilt version of this tried earlier turned out
+  // unreliable because of it (getBoundingClientRect returned a box that
+  // didn't match where the card actually hit-tests). Delegation sidesteps
+  // that entirely since it never needs the card's own rect.
+  let cardHovered = false;
+  notecardsEl.addEventListener("pointerover", (e) => {
+    if (e.pointerType === "touch") return;
+    const card = e.target.closest(".notecard");
+    if (card && card === selectedCard && scrollProgress() > 0.5) {
+      cardHovered = true;
+      applyCardTransform(scrollProgress());
+    }
+  });
+  notecardsEl.addEventListener("pointerout", (e) => {
+    const card = e.target.closest(".notecard");
+    if (card && card === selectedCard && !card.contains(e.relatedTarget)) {
+      cardHovered = false;
+      applyCardTransform(scrollProgress());
+    }
+  });
+
   function selectProject(id, card) {
     resetTilt(selectedCard);
     selectedCard = card || null;
@@ -128,7 +176,27 @@ export function initWork() {
   // notecard (3miu/blink aren't among the 3 notecards on the mat).
   function goToProject(id) {
     const card = notecardsEl.querySelector(`.notecard[data-card="${id}"]`);
+    const outgoing = selectedCard;
+
+    // The outgoing card flies out past the left edge; the incoming one
+    // drops in from off-screen above — see .notecard--enter-top/
+    // --exit-left in css/styles.css for why each needs its own forced
+    // styles rather than just relying on selectProject()'s plain class
+    // swap below.
+    if (outgoing && outgoing !== card) {
+      outgoing.classList.add("notecard--exit-left");
+      setTimeout(() => outgoing.classList.remove("notecard--exit-left"), 550);
+    }
+    if (card && card !== outgoing) {
+      card.classList.add("notecard--enter-top");
+      void card.offsetWidth; // commit the forced start position before selectProject moves it
+    }
+
     selectProject(id, card);
+
+    if (card && card !== outgoing) {
+      requestAnimationFrame(() => card.classList.remove("notecard--enter-top"));
+    }
     // Landing exactly on caseStudy.offsetTop put the hero title right
     // behind the still-visible sticky mat strip (the mat sits above the
     // content, z-index-wise, at whatever scroll position lands there) —
@@ -149,12 +217,21 @@ export function initWork() {
     const card = e.target.closest(".notecard");
     if (!card) return;
     if (card === selectedCard) {
-      // clicking the already-centered card is the explicit "go" gesture
-      window.scrollTo({ top: window.innerHeight, behavior: "smooth" });
+      // clicking the already-selected card (now parked in the corner,
+      // once scrolled in) returns to the open notecard index instead
+      // of trying to go "further" forward — there's nowhere further to go
+      deselectCard();
       return;
     }
     if (!bookOpen || selectedCard) return;
     selectProject(card.dataset.card, card);
+    // auto-scroll straight into the case study on the same click that
+    // selects the card — no separate "it's centered, click again to
+    // actually go" pause step. Custom-paced (smoothScrollTo) rather
+    // than native smooth-scroll, which felt too quick for this specific
+    // transition once it became automatic instead of a deliberate
+    // second click.
+    smoothScrollTo(window.innerHeight, 1100);
   });
 
   caseStudy.addEventListener("click", (e) => {
@@ -189,6 +266,15 @@ export function initWork() {
     caseStudySidebar.style.top = `${Math.max(96, anchorBottom + 24)}px`;
   }
 
+  // Split out from applyScroll so the hover handlers above can re-apply
+  // just the transform (with the hover scale factored in) without
+  // needing a scroll event to fire first.
+  function applyCardTransform(p) {
+    if (!selectedCard) return;
+    const scale = cardHovered ? 1.06 : 1;
+    selectedCard.style.transform = `translate(-50%, -50%) rotate(${lerp(REST.rot, PARKED.rot, p)}deg) rotateX(var(--card-rx, 0deg)) rotateY(var(--card-ry, 0deg)) scale(${scale})`;
+  }
+
   function applyScroll() {
     if (!isActiveTab || tab.dataset.state !== "selected") {
       return;
@@ -205,7 +291,7 @@ export function initWork() {
       selectedCard.style.left = `${lerp(REST.cx, PARKED.cx, p)}%`;
       selectedCard.style.top = `${lerp(REST.cy, PARKED.cy, p)}%`;
       selectedCard.style.width = `${lerp(REST.w, PARKED.w, p)}%`;
-      selectedCard.style.transform = `translate(-50%, -50%) rotate(${lerp(REST.rot, PARKED.rot, p)}deg) rotateX(var(--card-rx, 0deg)) rotateY(var(--card-ry, 0deg))`;
+      applyCardTransform(p);
     }
 
     // only flush the frame's bottom padding once truly parked — doing
